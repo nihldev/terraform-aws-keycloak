@@ -1,0 +1,157 @@
+# Markdownlint configuration
+# See: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# Default state for all rules
+default: true
+
+# MD001 - Heading levels should only increment by one level at a time
+MD001: true
+
+# MD003 - Heading style (consistent)
+MD003:
+  style: atx
+
+# MD004 - Unordered list style (consistent)
+MD004:
+  style: dash
+
+# MD007 - Unordered list indentation (2 spaces)
+MD007:
+  indent: 2
+
+# MD009 - Trailing spaces
+MD009:
+  br_spaces: 2
+  list_item_empty_lines: false
+  strict: false
+
+# MD010 - Hard tabs
+MD010:
+  code_blocks: false
+  spaces_per_tab: 2
+
+# MD012 - Multiple consecutive blank lines
+MD012:
+  maximum: 2
+
+# MD013 - Line length (disabled for now, can be restrictive)
+MD013: false
+
+# MD024 - Multiple headings with the same content (allow siblings)
+MD024:
+  siblings_only: true
+
+# MD025 - Multiple top-level headings in the same document
+MD025: true
+
+# MD026 - Trailing punctuation in heading
+MD026:
+  punctuation: ".,;:!?"
+
+# MD029 - Ordered list item prefix (ordered)
+MD029:
+  style: ordered
+
+# MD030 - Spaces after list markers
+MD030:
+  ul_single: 1
+  ol_single: 1
+  ul_multi: 1
+  ol_multi: 1
+
+# MD031 - Fenced code blocks should be surrounded by blank lines
+MD031: true
+
+# MD032 - Lists should be surrounded by blank lines
+MD032: true
+
+# MD033 - Inline HTML (allowed for some cases like badges, tables)
+MD033:
+  allowed_elements:
+    - br
+    - details
+    - summary
+    - img
+    - table
+    - thead
+    - tbody
+    - tr
+    - th
+    - td
+
+# MD034 - Bare URL used
+MD034: true
+
+# MD035 - Horizontal rule style
+MD035:
+  style: consistent
+
+# MD036 - Emphasis used instead of a heading
+MD036: true
+
+# MD037 - Spaces inside emphasis markers
+MD037: true
+
+# MD038 - Spaces inside code span elements
+MD038: true
+
+# MD039 - Spaces inside link text
+MD039: true
+
+# MD040 - Fenced code blocks should have a language specified
+MD040: true
+
+# MD041 - First line in file should be a top-level heading (disabled for flexibility)
+MD041: false
+
+# MD042 - No empty links
+MD042: true
+
+# MD043 - Required heading structure (disabled)
+MD043: false
+
+# MD044 - Proper names should have the correct capitalization
+MD044:
+  names:
+    - Terraform
+    - AWS
+    - PostgreSQL
+    - Keycloak
+    - GitHub
+    - mise
+    - ECS
+    - RDS
+    - TOML
+    - YAML
+    - JSON
+
+# MD045 - Images should have alternate text
+MD045: true
+
+# MD046 - Code block style (consistent)
+MD046:
+  style: fenced
+
+# MD047 - Files should end with a single newline character
+MD047: true
+
+# MD048 - Code fence style
+MD048:
+  style: backtick
+
+# MD049 - Emphasis style (consistent)
+MD049:
+  style: asterisk
+
+# MD050 - Strong style (consistent)
+MD050:
+  style: asterisk
+
+# MD051 - Link fragments should be valid
+MD051: true
+
+# MD052 - Reference links and images should use a label that is defined
+MD052: true
+
+# MD053 - Link and image reference definitions should be needed
+MD053: true

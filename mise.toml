@@ -1,0 +1,55 @@
+# Enable experimental features for hooks
+[settings]
+experimental = true
+
+[tools]
+# Infrastructure as Code
+terraform      = "1.14.0"
+tflint         = "latest"
+tfsec          = "latest"
+terraform-docs = "latest"
+
+# Code Quality
+pre-commit = "latest"
+
+# TOML formatting and linting
+taplo = "latest"
+
+# Markdown linting
+markdownlint-cli2 = "latest"
+
+# Automatically install pre-commit hooks when mise activates
+[hooks]
+postinstall = "tflint --init && pre-commit install --install-hooks"
+
+[tasks.check]
+description = "Run pre-commit checks on all files"
+run         = "pre-commit run --all-files"
+
+[tasks.fmt]
+description = "Format all Terraform files"
+run         = "terraform fmt -recursive ."
+
+[tasks.fmt-toml]
+description = "Format all TOML files"
+run         = "taplo format"
+
+[tasks.fmt-md]
+description = "Format all Markdown files"
+run         = "markdownlint-cli2 --fix '**/*.md'"
+
+[tasks.fmt-all]
+description = "Format all files (Terraform, TOML, Markdown)"
+run         = "terraform fmt -recursive . && taplo format && markdownlint-cli2 --fix '**/*.md'"
+
+[tasks.lint-toml]
+description = "Lint all TOML files"
+run         = "taplo lint"
+
+[tasks.lint-md]
+description = "Lint all Markdown files"
+run         = "markdownlint-cli2 '**/*.md'"
+
+[tasks.validate]
+description = "Validate all Terraform configurations"
+run         = "find . -type f -name '*.tf' -not -path '*/.terraform/*' -exec dirname {} \\; | sort -u | xargs -I {} sh -c 'echo \"Validating {}\" && terraform -chdir={} init -backend=false && terraform -chdir={} validate'"

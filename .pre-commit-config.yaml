@@ -1,0 +1,105 @@
+repos:
+  # Terraform hooks
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.96.1
+    hooks:
+      # Format Terraform files
+      - id: terraform_fmt
+        name: Terraform fmt
+        description: Rewrites all Terraform configuration files to canonical format
+
+      # Validate Terraform files
+      - id: terraform_validate
+        name: Terraform validate
+        description: Validates all Terraform configuration files
+        args:
+          - --hook-config=--retry-once-with-cleanup=true
+
+      # Generate and update documentation
+      - id: terraform_docs
+        name: Terraform docs
+        description: Inserts input and output documentation into README.md
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-to-existing-file=true
+          - --hook-config=--create-file-if-not-exist=true
+
+      # Lint Terraform files with tflint
+      - id: terraform_tflint
+        name: TFLint
+        description: Linter for Terraform files
+        args:
+          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+
+      # Security scanning with tfsec
+      - id: terraform_tfsec
+        name: TFSec
+        description: Security scanner for Terraform files
+        args:
+          - --args=--minimum-severity=MEDIUM
+          - --args=--config-file=__GIT_WORKING_DIR__/.tfsec.yml
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # Prevent large files from being committed
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=1000']
+
+      # Check for merge conflicts
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+
+      # Check YAML files
+      - id: check-yaml
+        name: Check YAML syntax
+
+      # Check TOML files
+      - id: check-toml
+        name: Check TOML syntax
+
+      # Check for trailing whitespace
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        args: ['--markdown-linebreak-ext=md']
+
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+        name: Fix end of files
+
+      # Check for private keys
+      - id: detect-private-key
+        name: Detect private keys
+
+      # Check for AWS credentials
+      - id: detect-aws-credentials
+        name: Detect AWS credentials
+        args: ['--allow-missing-credentials']
+
+  # TOML formatting and linting
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      # Format TOML files
+      - id: taplo-format
+        name: Format TOML files
+        description: Auto-format TOML files with taplo
+
+      # Lint TOML files
+      - id: taplo-lint
+        name: Lint TOML files
+        description: Lint TOML files for errors and style issues
+
+  # Markdown linting (using mise-installed markdownlint-cli2)
+  - repo: local
+    hooks:
+      - id: markdownlint
+        name: Markdown lint
+        description: Lint and fix markdown files
+        entry: markdownlint-cli2
+        args: ['--fix', '--config', '.markdownlint.yaml']
+        language: system
+        types: [markdown]
+        exclude: '(\.terraform/|node_modules/)'

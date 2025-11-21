@@ -1,0 +1,7 @@
+# TFSec configuration
+# Exclude checks for external modules that we cannot control
+
+exclude:
+  # VPC flow logs are enabled at the module level, but tfsec scans the internal VPC resource
+  # in the external terraform-aws-modules/vpc/aws module
+  - aws-ec2-require-vpc-flow-logs-for-all-vpcs

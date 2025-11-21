@@ -1,0 +1,276 @@
+#######################
+# ECS Cluster
+#######################
+
+resource "aws_ecs_cluster" "keycloak" {
+  name = "${var.name}-keycloak-${var.environment}"
+
+  setting {
+    name  = "containerInsights"
+    value = var.enable_container_insights ? "enabled" : "disabled"
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-${var.environment}"
+      Environment = var.environment
+    }
+  )
+}
+
+#######################
+# ECS Task Definition
+#######################
+
+locals {
+  # Construct database URL
+  db_url = "jdbc:postgresql://${aws_db_instance.keycloak.address}:${aws_db_instance.keycloak.port}/${aws_db_instance.keycloak.db_name}"
+
+  # Base environment variables
+  base_environment = [
+    {
+      name  = "KC_DB"
+      value = "postgres"
+    },
+    {
+      name  = "KC_DB_URL"
+      value = local.db_url
+    },
+    {
+      name  = "KC_DB_USERNAME"
+      value = aws_db_instance.keycloak.username
+    },
+    {
+      name  = "KC_HEALTH_ENABLED"
+      value = "true"
+    },
+    {
+      name  = "KC_METRICS_ENABLED"
+      value = "true"
+    },
+    {
+      name  = "KC_LOG_LEVEL"
+      value = var.keycloak_loglevel
+    },
+    {
+      name  = "KC_PROXY"
+      value = "edge"
+    },
+    {
+      name  = "KC_HTTP_ENABLED"
+      value = "true"
+    },
+  ]
+
+  # Hostname configuration (required for production)
+  hostname_environment = var.keycloak_hostname != "" ? [
+    {
+      name  = "KC_HOSTNAME"
+      value = var.keycloak_hostname
+    },
+    {
+      name  = "KC_HOSTNAME_STRICT"
+      value = "true"
+    },
+  ] : []
+
+  # Convert extra env vars map to list format
+  extra_environment = [
+    for key, value in var.keycloak_extra_env_vars : {
+      name  = key
+      value = value
+    }
+  ]
+
+  # Combine all environment variables
+  environment = concat(
+    local.base_environment,
+    local.hostname_environment,
+    local.extra_environment
+  )
+
+  # Secrets
+  secrets = [
+    {
+      name      = "KC_DB_PASSWORD"
+      valueFrom = "${aws_secretsmanager_secret.keycloak_db.arn}:password::"
+    },
+    {
+      name      = "KEYCLOAK_ADMIN"
+      valueFrom = "${aws_secretsmanager_secret.keycloak_admin.arn}:username::"
+    },
+    {
+      name      = "KEYCLOAK_ADMIN_PASSWORD"
+      valueFrom = "${aws_secretsmanager_secret.keycloak_admin.arn}:password::"
+    },
+  ]
+}
+
+resource "aws_ecs_task_definition" "keycloak" {
+  family                   = "${var.name}-keycloak-${var.environment}"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = var.task_cpu
+  memory                   = var.task_memory
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([
+    {
+      name  = "keycloak"
+      image = "quay.io/keycloak/keycloak:${var.keycloak_version}"
+
+      command = ["start", "--optimized"]
+
+      essential = true
+
+      portMappings = [
+        {
+          containerPort = 8080
+          hostPort      = 8080
+          protocol      = "tcp"
+        }
+      ]
+
+      environment = local.environment
+      secrets     = local.secrets
+
+      healthCheck = {
+        command = [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
+        ]
+        interval    = 30
+        timeout     = 5
+        retries     = 3
+        startPeriod = 60
+      }
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.keycloak.name
+          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-stream-prefix" = "keycloak"
+        }
+      }
+    }
+  ])
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-${var.environment}"
+      Environment = var.environment
+    }
+  )
+}
+
+#######################
+# ECS Service
+#######################
+
+resource "aws_ecs_service" "keycloak" {
+  name            = "${var.name}-keycloak-${var.environment}"
+  cluster         = aws_ecs_cluster.keycloak.id
+  task_definition = aws_ecs_task_definition.keycloak.arn
+  desired_count   = var.desired_count
+  launch_type     = "FARGATE"
+
+  platform_version = "LATEST"
+
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.keycloak.arn
+    container_name   = "keycloak"
+    container_port   = 8080
+  }
+
+  health_check_grace_period_seconds = var.health_check_grace_period_seconds
+
+  # Note: ordered_placement_strategy is not supported for Fargate launch type
+  # Fargate automatically spreads tasks across AZs when using multiple subnets
+
+  depends_on = [
+    aws_lb_listener.http,
+    aws_iam_role_policy.ecs_task_execution_secrets,
+  ]
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-${var.environment}"
+      Environment = var.environment
+    }
+  )
+}
+
+#######################
+# Auto Scaling
+#######################
+
+resource "aws_appautoscaling_target" "keycloak" {
+  max_capacity       = var.desired_count * 3
+  min_capacity       = var.desired_count
+  resource_id        = "service/${aws_ecs_cluster.keycloak.name}/${aws_ecs_service.keycloak.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-autoscaling-${var.environment}"
+      Environment = var.environment
+    }
+  )
+}
+
+# Scale up based on CPU
+resource "aws_appautoscaling_policy" "keycloak_cpu" {
+  name               = "${var.name}-keycloak-${var.environment}-cpu"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.keycloak.resource_id
+  scalable_dimension = aws_appautoscaling_target.keycloak.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.keycloak.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value       = 70.0
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
+
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+  }
+}
+
+# Scale up based on memory
+resource "aws_appautoscaling_policy" "keycloak_memory" {
+  name               = "${var.name}-keycloak-${var.environment}-memory"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.keycloak.resource_id
+  scalable_dimension = aws_appautoscaling_target.keycloak.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.keycloak.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value       = 70.0
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
+
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageMemoryUtilization"
+    }
+  }
+}
+
+#######################
+# Data Sources
+#######################
+
+data "aws_region" "current" {}

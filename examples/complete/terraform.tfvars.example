@@ -1,0 +1,36 @@
+# General Configuration
+name        = "myapp"
+environment = "dev"
+aws_region  = "us-east-1"
+
+# High Availability
+# Set to true for production, false for dev/test to save costs
+multi_az = false
+
+# Keycloak Configuration
+keycloak_version = "26.0"
+keycloak_loglevel = "INFO"
+desired_count     = 2
+
+# Task Resources
+# dev:  task_cpu = 512,  task_memory = 1024
+# prod: task_cpu = 2048, task_memory = 4096
+task_cpu    = 1024
+task_memory = 2048
+
+# Database Configuration
+# dev:  db.t4g.micro
+# prod: db.r6g.large or higher
+db_instance_class          = "db.t4g.micro"
+db_allocated_storage       = 20
+db_backup_retention_period = 7
+
+# HTTPS Configuration (optional)
+# Uncomment and provide values if you have an ACM certificate
+# certificate_arn   = "arn:aws:acm:us-east-1:123456789012:certificate/xxx"
+# keycloak_hostname = "auth.example.com"
+
+# Security
+# Restrict access to specific IP ranges for production
+# Example: ["203.0.113.0/24", "198.51.100.0/24"]
+allowed_cidr_blocks = ["0.0.0.0/0"]
