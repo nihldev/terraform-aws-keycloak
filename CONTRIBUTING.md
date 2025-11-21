@@ -50,9 +50,9 @@ mise list
 
 ## Development Workflow
 
-### Pre-commit Hooks
+### Pre-push Hooks
 
-Pre-commit hooks run automatically on every commit and will:
+Pre-push hooks run automatically when you push to the remote repository and will:
 
 **Terraform:**
 
@@ -79,12 +79,17 @@ Pre-commit hooks run automatically on every commit and will:
 - Detect private keys and AWS credentials
 - Ensure files end with newlines
 
-The hooks are automatically installed by mise. No manual setup required!
+The hooks are automatically installed by mise as pre-push hooks. No manual setup required!
+
+**Why pre-push instead of pre-commit?**
+- Faster development workflow - checks run before push, not on every commit
+- Still catches issues before they reach the remote repository
+- Run checks manually anytime with `mise run check`
 
 ### Running Checks Manually
 
 ```bash
-# Run all pre-commit checks on all files
+# Run all pre-push checks on all files
 mise run check
 
 # Format all Terraform files
@@ -129,27 +134,27 @@ mise run validate
    git commit -m "feat: add new feature"
    ```
 
-   Pre-commit hooks will run automatically. If they fail:
-   - Review the output for errors
-   - Fix any issues
-   - Stage the fixes: `git add .`
-   - Commit again
-
 4. **Push your branch:**
 
    ```bash
    git push origin feature/my-new-feature
    ```
 
+   Pre-push hooks will run automatically. If they fail:
+   - Review the output for errors
+   - Fix any issues
+   - Commit the fixes: `git add . && git commit -m "fix: address validation issues"`
+   - Push again
+
 ### Skipping Hooks (Not Recommended)
 
-If you need to skip pre-commit hooks (e.g., work in progress):
+If you need to skip pre-push hooks (e.g., work in progress):
 
 ```bash
-git commit --no-verify -m "WIP: incomplete feature"
+git push --no-verify
 ```
 
-**Note:** Use this sparingly. All commits to main should pass pre-commit checks.
+**Note:** Use this sparingly. All pushes to main should pass validation checks.
 
 ## Code Standards
 
@@ -210,7 +215,7 @@ tags = merge(
 
 ### TOML Style
 
-- Use `taplo format` for formatting (enforced by pre-commit)
+- Use `taplo format` for formatting (enforced by pre-push hooks)
 - Organize sections logically with blank lines between groups
 - Use comments to explain complex configurations
 - Keep arrays and inline tables readable
@@ -233,7 +238,7 @@ run = "pre-commit run --all-files"
 
 ### Markdown Style
 
-- Use `markdownlint` for linting (enforced by pre-commit)
+- Use `markdownlint` for linting (enforced by pre-push hooks)
 - Follow consistent heading hierarchy (don't skip levels)
 - Use ATX-style headings (`#` prefix)
 - Use dash (`-`) for unordered lists
@@ -314,16 +319,17 @@ This will:
 
 ## Troubleshooting
 
-### Pre-commit hooks not running
+### Pre-push hooks not running
 
-If hooks aren't running automatically:
+If hooks aren't running automatically on push:
 
 ```bash
 # Reinstall hooks
-pre-commit install --install-hooks
+pre-commit uninstall
+pre-commit install --hook-type pre-push --install-hooks
 
 # Verify installation
-pre-commit run --all-files
+pre-commit run --hook-stage push --all-files
 ```
 
 ### tflint errors
@@ -370,18 +376,24 @@ Terraform validate
 
 - **NEVER** commit secrets, credentials, or sensitive data
 - Use AWS Secrets Manager for sensitive values
-- The pre-commit hook checks for AWS credentials and private keys
+- The pre-push hooks check for AWS credentials and private keys
 - Review `.gitignore` to ensure sensitive files are excluded
 
 ### Security Scanning
 
-All code is automatically scanned with `tfsec` on commit. Address any HIGH or CRITICAL issues before committing.
+All code is automatically scanned with multiple tools on push:
 
-Run security scan manually:
-
+**tfsec** - Security scanner (minimum severity: LOW)
 ```bash
-tfsec .
+tfsec . --minimum-severity=LOW
 ```
+
+**Conftest/OPA** - Custom policy validation
+```bash
+conftest test --policy policy/ modules/
+```
+
+Address HIGH or CRITICAL issues before pushing.
 
 ## Commit Message Format
 
@@ -417,12 +429,105 @@ docs(Keycloak): update usage examples
 chore: update pre-commit hooks
 ```
 
+## Automated Quality Checks
+
+This repository uses comprehensive automated checks to catch issues before code review. All checks run automatically as **pre-push hooks** when you push code.
+
+### What Gets Checked Automatically
+
+| Check | What It Catches | Auto-Fix | Tool |
+|-------|----------------|----------|------|
+| **Terraform Format** | Inconsistent code formatting | ✅ Yes | terraform fmt |
+| **Terraform Validate** | Syntax errors, invalid references | ❌ No | terraform validate |
+| **TFLint** | Deprecated resources, naming violations, undocumented variables | ❌ No | tflint |
+| **TFSec** | Security issues, missing encryption, public resources | ❌ No | tfsec |
+| **OPA Policies** | Keycloak-specific config issues | ❌ No | conftest |
+| **tfvars Coverage** | Missing variable examples | ❌ No | custom script |
+| **Markdown Lint** | Markdown formatting issues | ✅ Yes | markdownlint |
+| **TOML Format** | TOML syntax and style | ✅ Yes | taplo |
+| **Secret Detection** | AWS credentials, private keys | ❌ No | pre-commit |
+
+### OPA/Conftest Policies (Keycloak-Specific)
+
+This repository uses Open Policy Agent (OPA) policies via Conftest for application-specific validations that standard linters can't catch.
+
+**Location**: `policy/keycloak.rego`
+
+**What it checks**:
+- Multi-instance cache configuration (prevents cache inconsistencies)
+- Keycloak hostname strict backchannel settings (prevents health check failures)
+- ECS deployment circuit breakers (enables automatic rollback)
+- ALB access logging (security audit trails)
+- KMS key usage (customer-managed encryption)
+- Database connection pool configuration
+
+**Run manually**:
+```bash
+conftest test --policy policy/ modules/keycloak/
+```
+
+**Writing custom policies**:
+```rego
+package main
+
+import rego.v1
+
+deny contains msg if {
+    some resource in input.resource.aws_xxx
+    not meets_requirement(resource)
+    msg := "Your error message here"
+}
+```
+
+### tfvars.example Coverage
+
+A custom script validates that all module variables are documented in `terraform.tfvars.example`:
+
+```bash
+./scripts/check-tfvars-coverage.sh
+```
+
+This ensures users have examples for all configuration options.
+
+### What Automation Can't Catch
+
+Some issues require human judgment and code review:
+
+| Issue | Why Manual Review Needed |
+|-------|--------------------------|
+| Keycloak startup mode | Requires understanding of deployment lifecycle and database initialization |
+| Performance tuning | Workload-specific decisions (connection pools, task sizing) |
+| Architecture trade-offs | Context-dependent (JDBC_PING vs AWS_PING, cache strategies) |
+| Documentation quality | Subjective: clarity, completeness, audience understanding |
+| Security group egress rules | Requires understanding application network requirements |
+
+### Bypassing Specific Checks
+
+If a check incorrectly flags valid code, document why it's safe and suppress:
+
+**TFSec:**
+```hcl
+#tfsec:ignore:aws-xxx-check-id
+resource "aws_xxx" "example" {
+  # Reason: Explain why this is intentional/safe
+}
+```
+
+**TFLint:**
+```hcl
+# tflint-ignore: rule_name
+resource "aws_xxx" "example" {
+  # Reason: Explain why this exception is needed
+}
+```
+
 ## Getting Help
 
 - Check module README.md files for documentation
 - Review examples in `examples/` directory
 - Open an issue for bugs or feature requests
 - Review existing issues and pull requests
+- Read policy documentation in `policy/` directory
 
 ## License
 

@@ -41,10 +41,48 @@ variable "allowed_cidr_blocks" {
   description = "CIDR blocks allowed to access Keycloak through ALB"
   type        = list(string)
   default     = ["0.0.0.0/0"]
+
+  validation {
+    condition = !(
+      var.environment == "prod" &&
+      contains(var.allowed_cidr_blocks, "0.0.0.0/0")
+    )
+    error_message = <<-EOT
+      SECURITY WARNING: Production environment detected with unrestricted access (0.0.0.0/0).
+
+      Restrict access to specific CIDR blocks for security:
+      - Office IP ranges: ["203.0.113.0/24"]
+      - VPN CIDR blocks: ["198.51.100.0/24"]
+      - CloudFront IP ranges (if using CDN)
+      - Partner/customer IP ranges
+
+      Example: allowed_cidr_blocks = ["203.0.113.0/24", "198.51.100.0/24"]
+
+      If you truly need public access, set environment to something other than "prod" or implement additional security controls (WAF, rate limiting, MFA).
+    EOT
+  }
 }
 
 variable "certificate_arn" {
   description = "ACM certificate ARN for HTTPS listener (optional, will create HTTP listener if not provided)"
+  type        = string
+  default     = ""
+}
+
+variable "alb_access_logs_enabled" {
+  description = "Enable ALB access logs"
+  type        = bool
+  default     = false
+}
+
+variable "alb_access_logs_bucket" {
+  description = "S3 bucket name for ALB access logs (required if alb_access_logs_enabled is true)"
+  type        = string
+  default     = ""
+}
+
+variable "alb_access_logs_prefix" {
+  description = "S3 bucket prefix for ALB access logs"
   type        = string
   default     = ""
 }
@@ -157,6 +195,30 @@ variable "db_skip_final_snapshot" {
   default     = false
 }
 
+variable "db_kms_key_id" {
+  description = "KMS key ID for RDS encryption (uses AWS managed key if not provided)"
+  type        = string
+  default     = ""
+}
+
+variable "db_performance_insights_retention_period" {
+  description = "Performance Insights retention period in days (7-731)"
+  type        = number
+  default     = 7
+}
+
+variable "db_iam_database_authentication_enabled" {
+  description = "Enable IAM database authentication for RDS"
+  type        = bool
+  default     = false
+}
+
+variable "secrets_kms_key_id" {
+  description = "KMS key ID for Secrets Manager encryption (uses AWS managed key if not provided)"
+  type        = string
+  default     = ""
+}
+
 #######################
 # Keycloak Configuration
 #######################
@@ -183,4 +245,39 @@ variable "keycloak_extra_env_vars" {
   description = "Additional environment variables for Keycloak container"
   type        = map(string)
   default     = {}
+}
+
+variable "keycloak_cache_enabled" {
+  description = "Enable distributed cache for multi-instance deployments (required when desired_count > 1)"
+  type        = bool
+  default     = true
+}
+
+variable "keycloak_cache_stack" {
+  description = "Cache stack protocol (tcp, udp, kubernetes, jdbc-ping). Use 'jdbc-ping' for reliable ECS deployments"
+  type        = string
+  default     = "jdbc-ping"
+
+  validation {
+    condition     = contains(["tcp", "udp", "jdbc-ping"], var.keycloak_cache_stack)
+    error_message = "Cache stack must be one of: tcp, udp, jdbc-ping. For ECS deployments, use 'jdbc-ping'."
+  }
+}
+
+variable "db_pool_initial_size" {
+  description = "Initial size of database connection pool"
+  type        = number
+  default     = 5
+}
+
+variable "db_pool_min_size" {
+  description = "Minimum size of database connection pool"
+  type        = number
+  default     = 5
+}
+
+variable "db_pool_max_size" {
+  description = "Maximum size of database connection pool"
+  type        = number
+  default     = 20
 }

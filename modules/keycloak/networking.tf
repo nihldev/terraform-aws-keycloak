@@ -42,6 +42,10 @@ resource "aws_security_group_rule" "alb_ingress_https" {
   description       = "Allow HTTPS inbound traffic"
 }
 
+# Allow all outbound traffic for ALB to reach ECS tasks
+# Note: ALB needs to communicate with ECS tasks on dynamic ports and handle health checks
+# Egress is allowed to all destinations as ALB only forwards to internal ECS tasks
+# The actual traffic is controlled by the target group and ECS security group ingress rules
 #tfsec:ignore:aws-ec2-no-public-egress-sgr
 resource "aws_security_group_rule" "alb_egress" {
   type              = "egress"
@@ -50,7 +54,7 @@ resource "aws_security_group_rule" "alb_egress" {
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.alb.id
-  description       = "Allow all outbound traffic"
+  description       = "Allow all outbound traffic to reach ECS tasks"
 }
 
 #######################
@@ -85,6 +89,14 @@ resource "aws_security_group_rule" "ecs_tasks_ingress_from_alb" {
   description              = "Allow traffic from ALB to ECS tasks"
 }
 
+# Allow all outbound traffic for ECS tasks
+# Required for:
+# - Pulling container images from quay.io
+# - Connecting to RDS database (via security group, not CIDR)
+# - External OIDC/SAML providers and APIs
+# - DNS resolution
+# - NTP time sync
+# Actual database access is controlled by RDS security group ingress rules
 #tfsec:ignore:aws-ec2-no-public-egress-sgr
 resource "aws_security_group_rule" "ecs_tasks_egress" {
   type              = "egress"
@@ -93,7 +105,7 @@ resource "aws_security_group_rule" "ecs_tasks_egress" {
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.ecs_tasks.id
-  description       = "Allow all outbound traffic"
+  description       = "Allow all outbound traffic for container operations and external integrations"
 }
 
 #######################
@@ -111,6 +123,15 @@ resource "aws_lb" "keycloak" {
   enable_deletion_protection = var.environment == "prod" ? true : false
   enable_http2               = true
   drop_invalid_header_fields = true
+
+  dynamic "access_logs" {
+    for_each = var.alb_access_logs_enabled ? [1] : []
+    content {
+      enabled = true
+      bucket  = var.alb_access_logs_bucket
+      prefix  = var.alb_access_logs_prefix != "" ? var.alb_access_logs_prefix : "${var.name}-keycloak-${var.environment}"
+    }
+  }
 
   tags = merge(
     var.tags,

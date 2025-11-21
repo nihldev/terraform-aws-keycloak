@@ -42,6 +42,18 @@ locals {
       value = aws_db_instance.keycloak.username
     },
     {
+      name  = "KC_DB_POOL_INITIAL_SIZE"
+      value = tostring(var.db_pool_initial_size)
+    },
+    {
+      name  = "KC_DB_POOL_MIN_SIZE"
+      value = tostring(var.db_pool_min_size)
+    },
+    {
+      name  = "KC_DB_POOL_MAX_SIZE"
+      value = tostring(var.db_pool_max_size)
+    },
+    {
       name  = "KC_HEALTH_ENABLED"
       value = "true"
     },
@@ -73,6 +85,23 @@ locals {
       name  = "KC_HOSTNAME_STRICT"
       value = "true"
     },
+    {
+      # Allow health checks from ALB to use backend URL instead of frontend hostname
+      name  = "KC_HOSTNAME_STRICT_BACKCHANNEL"
+      value = "false"
+    },
+  ] : []
+
+  # Cache configuration (critical for multi-instance deployments)
+  cache_environment = var.keycloak_cache_enabled ? [
+    {
+      name  = "KC_CACHE"
+      value = "ispn"
+    },
+    {
+      name  = "KC_CACHE_STACK"
+      value = var.keycloak_cache_stack
+    },
   ] : []
 
   # Convert extra env vars map to list format
@@ -87,6 +116,7 @@ locals {
   environment = concat(
     local.base_environment,
     local.hostname_environment,
+    local.cache_environment,
     local.extra_environment
   )
 
@@ -121,7 +151,9 @@ resource "aws_ecs_task_definition" "keycloak" {
       name  = "keycloak"
       image = "quay.io/keycloak/keycloak:${var.keycloak_version}"
 
-      command = ["start", "--optimized"]
+      # Using 'start' instead of 'start --optimized' to allow runtime configuration
+      # and proper database initialization on first deployment
+      command = ["start"]
 
       essential = true
 
@@ -193,6 +225,18 @@ resource "aws_ecs_service" "keycloak" {
   }
 
   health_check_grace_period_seconds = var.health_check_grace_period_seconds
+
+  # Deployment circuit breaker for automatic rollback on failures
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  # Deployment configuration for zero-downtime updates
+  deployment_configuration {
+    minimum_healthy_percent = 100
+    maximum_percent         = 200
+  }
 
   # Note: ordered_placement_strategy is not supported for Fargate launch type
   # Fargate automatically spreads tasks across AZs when using multiple subnets

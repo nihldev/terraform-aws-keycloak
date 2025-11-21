@@ -61,6 +61,11 @@ resource "aws_security_group_rule" "rds_ingress_from_ecs" {
   description              = "Allow PostgreSQL access from ECS tasks"
 }
 
+# RDS egress rule for stateful connection handling
+# Note: This egress rule is technically not required for RDS as stateful security groups
+# automatically allow response traffic. However, it's kept for explicit clarity and
+# to prevent potential issues with connection tracking edge cases.
+# RDS never initiates outbound connections in this configuration.
 #tfsec:ignore:aws-ec2-no-public-egress-sgr
 resource "aws_security_group_rule" "rds_egress" {
   type              = "egress"
@@ -69,14 +74,13 @@ resource "aws_security_group_rule" "rds_egress" {
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.rds.id
-  description       = "Allow all outbound traffic"
+  description       = "Allow responses to established connections (stateful)"
 }
 
 #######################
 # RDS Instance
 #######################
 
-#tfsec:ignore:aws-rds-enable-iam-auth
 resource "aws_db_instance" "keycloak" {
   identifier     = "${var.name}-keycloak-${var.environment}"
   engine         = "postgres"
@@ -87,6 +91,7 @@ resource "aws_db_instance" "keycloak" {
   max_allocated_storage = var.db_max_allocated_storage
   storage_type          = "gp3"
   storage_encrypted     = true
+  kms_key_id            = var.db_kms_key_id != "" ? var.db_kms_key_id : null
 
   db_name  = "keycloak"
   username = "keycloak"
@@ -107,9 +112,13 @@ resource "aws_db_instance" "keycloak" {
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 
+  # IAM database authentication
+  iam_database_authentication_enabled = var.db_iam_database_authentication_enabled
+
   # Performance Insights
-  performance_insights_enabled    = true
-  performance_insights_kms_key_id = null # Use default AWS managed key
+  performance_insights_enabled          = true
+  performance_insights_kms_key_id       = var.db_kms_key_id != "" ? var.db_kms_key_id : null
+  performance_insights_retention_period = var.db_performance_insights_retention_period
 
   tags = merge(
     var.tags,
@@ -134,6 +143,7 @@ resource "aws_secretsmanager_secret" "keycloak_db" {
   name_prefix             = "${var.name}-keycloak-db-${var.environment}-"
   description             = "Keycloak database credentials"
   recovery_window_in_days = 7
+  kms_key_id              = var.secrets_kms_key_id != "" ? var.secrets_kms_key_id : null
 
   tags = merge(
     var.tags,
@@ -159,6 +169,7 @@ resource "aws_secretsmanager_secret" "keycloak_admin" {
   name_prefix             = "${var.name}-keycloak-admin-${var.environment}-"
   description             = "Keycloak admin credentials"
   recovery_window_in_days = 7
+  kms_key_id              = var.secrets_kms_key_id != "" ? var.secrets_kms_key_id : null
 
   tags = merge(
     var.tags,

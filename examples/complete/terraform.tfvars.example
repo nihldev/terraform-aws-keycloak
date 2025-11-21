@@ -1,36 +1,98 @@
-# General Configuration
-name        = "myapp"
-environment = "dev"
-aws_region  = "us-east-1"
+#######################
+# Basic Configuration
+#######################
 
+# AWS region to deploy resources
+aws_region = "us-east-1"
+
+# Name prefix for all resources
+name = "myapp"
+
+# Environment name (dev, staging, prod)
+environment = "dev"
+
+#######################
 # High Availability
-# Set to true for production, false for dev/test to save costs
+#######################
+
+# Enable multi-AZ deployment for production
 multi_az = false
 
-# Keycloak Configuration
-keycloak_version = "26.0"
-keycloak_loglevel = "INFO"
-desired_count     = 2
+# Number of Keycloak instances to run
+desired_count = 2
 
-# Task Resources
+#######################
+# Keycloak Configuration
+#######################
+
+# Keycloak version to deploy
+keycloak_version = "26.0"
+
+# ECS task resources
 # dev:  task_cpu = 512,  task_memory = 1024
 # prod: task_cpu = 2048, task_memory = 4096
-task_cpu    = 1024
-task_memory = 2048
+task_cpu    = 1024  # 1 vCPU
+task_memory = 2048  # 2 GB
 
-# Database Configuration
-# dev:  db.t4g.micro
-# prod: db.r6g.large or higher
-db_instance_class          = "db.t4g.micro"
-db_allocated_storage       = 20
-db_backup_retention_period = 7
-
-# HTTPS Configuration (optional)
-# Uncomment and provide values if you have an ACM certificate
-# certificate_arn   = "arn:aws:acm:us-east-1:123456789012:certificate/xxx"
+# Keycloak hostname (required for production with HTTPS)
 # keycloak_hostname = "auth.example.com"
 
-# Security
-# Restrict access to specific IP ranges for production
+# Log level (INFO, DEBUG, WARN, ERROR)
+keycloak_loglevel = "INFO"
+
+# Cache configuration (enabled by default for multi-instance deployments)
+# keycloak_cache_enabled = true
+# keycloak_cache_stack = "jdbc-ping"  # Uses database for cluster discovery
+
+#######################
+# Database Configuration
+#######################
+
+# RDS instance class
+# dev:  db.t4g.micro
+# prod: db.r6g.large or higher
+db_instance_class = "db.t4g.micro"
+
+# Storage configuration
+db_allocated_storage = 20
+
+# Backup retention (7 for dev, 30 for prod)
+db_backup_retention_period = 7
+
+# Database connection pool settings (optional, defaults shown)
+# db_pool_initial_size = 5
+# db_pool_min_size = 5
+# db_pool_max_size = 20
+
+# Performance Insights retention period (7-731 days)
+# db_performance_insights_retention_period = 7
+
+#######################
+# Security Configuration
+#######################
+
+# ACM certificate ARN for HTTPS (optional)
+# certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxx"
+
+# CIDR blocks allowed to access Keycloak
+# Default allows all - RESTRICT THIS IN PRODUCTION!
 # Example: ["203.0.113.0/24", "198.51.100.0/24"]
 allowed_cidr_blocks = ["0.0.0.0/0"]
+
+# KMS key for RDS encryption (optional, uses AWS managed key if not provided)
+# db_kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/xxxxx"
+
+# KMS key for Secrets Manager encryption (optional, uses AWS managed key if not provided)
+# secrets_kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/xxxxx"
+
+# Enable IAM database authentication (optional, more secure than password-based)
+# db_iam_database_authentication_enabled = false
+
+#######################
+# Monitoring & Logging
+#######################
+
+# Enable ALB access logs (requires S3 bucket)
+# alb_access_logs_enabled = true
+# alb_access_logs_bucket = "my-alb-logs-bucket"
+# alb_access_logs_prefix = "keycloak"

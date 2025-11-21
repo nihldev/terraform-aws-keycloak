@@ -9,9 +9,14 @@ plugin "aws" {
   source  = "github.com/terraform-linters/tflint-ruleset-aws"
 }
 
-# General rules
+#######################
+# Terraform Best Practices
+#######################
+
 rule "terraform_naming_convention" {
   enabled = true
+
+  format = "snake_case"
 }
 
 rule "terraform_required_version" {
@@ -50,8 +55,65 @@ rule "terraform_standard_module_structure" {
   enabled = true
 }
 
-# AWS-specific rules
+rule "terraform_comment_syntax" {
+  enabled = true
+}
+
+rule "terraform_workspace_remote" {
+  enabled = true
+}
+
+#######################
+# AWS-Specific Rules
+#######################
+
 rule "aws_resource_missing_tags" {
   enabled = true
   tags = ["Name", "Environment"]
+}
+
+# Prevent deprecated instance types
+rule "aws_db_instance_previous_type" {
+  enabled = true
+}
+
+rule "aws_ecs_task_definition_previous_container_runtime" {
+  enabled = true
+}
+
+rule "aws_instance_previous_type" {
+  enabled = true
+}
+
+# Ensure proper configuration
+rule "aws_db_instance_default_parameter_group" {
+  enabled = true
+}
+
+rule "aws_elasticache_cluster_default_parameter_group" {
+  enabled = true
+}
+
+rule "aws_route_not_specified_target" {
+  enabled = true
+}
+
+rule "aws_route_specified_multiple_targets" {
+  enabled = true
+}
+
+#######################
+# Security Rules
+#######################
+
+rule "aws_iam_policy_document_gov_friendly_arns" {
+  enabled = true
+}
+
+rule "aws_iam_role_policy_gov_friendly_arns" {
+  enabled = true
+}
+
+rule "aws_iam_policy_gov_friendly_arns" {
+  enabled = true
 }

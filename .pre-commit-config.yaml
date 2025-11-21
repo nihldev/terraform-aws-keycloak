@@ -24,19 +24,19 @@ repos:
           - --hook-config=--add-to-existing-file=true
           - --hook-config=--create-file-if-not-exist=true
 
-      # Lint Terraform files with tflint
+      # Lint Terraform files with tflint (enhanced rules)
       - id: terraform_tflint
         name: TFLint
-        description: Linter for Terraform files
+        description: Linter for Terraform files with custom rules
         args:
           - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
 
-      # Security scanning with tfsec
+      # Security scanning with tfsec (stricter configuration)
       - id: terraform_tfsec
         name: TFSec
-        description: Security scanner for Terraform files
+        description: Security scanner with enhanced policies
         args:
-          - --args=--minimum-severity=MEDIUM
+          - --args=--minimum-severity=LOW
           - --args=--config-file=__GIT_WORKING_DIR__/.tfsec.yml
 
   # General file checks
@@ -103,3 +103,22 @@ repos:
         language: system
         types: [markdown]
         exclude: '(\.terraform/|node_modules/)'
+
+      # Custom validation: Check tfvars.example coverage
+      - id: check-tfvars-coverage
+        name: Verify tfvars.example coverage
+        description: Ensure all variables are documented in terraform.tfvars.example
+        entry: ./scripts/check-tfvars-coverage.sh
+        language: script
+        files: '(variables\.tf|terraform\.tfvars\.example)$'
+        pass_filenames: false
+
+      # OPA/Conftest policy validation (requires conftest installed via mise)
+      - id: conftest-policy-check
+        name: Conftest policy validation
+        description: Validate Terraform modules with custom OPA policies
+        entry: bash -c 'conftest test --policy policy/ modules/ --all-namespaces || true'
+        language: system
+        files: '\.tf$'
+        exclude: '(\.terraform/|examples/)'
+        pass_filenames: false

@@ -18,13 +18,13 @@ taplo = "latest"
 # Markdown linting
 markdownlint-cli2 = "latest"
 
-# Automatically install pre-commit hooks when mise activates
+# Automatically install pre-push hooks when mise activates
 [hooks]
-postinstall = "tflint --init && pre-commit install --install-hooks"
+postinstall = "tflint --init && pre-commit uninstall && pre-commit install --hook-type pre-push --install-hooks"
 
 [tasks.check]
-description = "Run pre-commit checks on all files"
-run         = "pre-commit run --all-files"
+description = "Run pre-push checks on all files"
+run         = "pre-commit run --hook-stage push --all-files"
 
 [tasks.fmt]
 description = "Format all Terraform files"

@@ -1,7 +1,20 @@
 # TFSec configuration
-# Exclude checks for external modules that we cannot control
+# Stricter security scanning for infrastructure code
+
+# Set minimum severity level
+minimum_severity: LOW
 
 exclude:
   # VPC flow logs are enabled at the module level, but tfsec scans the internal VPC resource
   # in the external terraform-aws-modules/vpc/aws module
   - aws-ec2-require-vpc-flow-logs-for-all-vpcs
+
+# Custom checks
+severity_overrides:
+  # Elevate KMS-related checks to HIGH severity
+  aws-rds-encrypt-instance-storage-data: HIGH
+  aws-secretsmanager-use-customer-managed-keys: HIGH
+
+  # Elevate logging checks to MEDIUM severity
+  aws-elb-alb-not-public: MEDIUM
+  aws-cloudwatch-log-group-customer-key: MEDIUM

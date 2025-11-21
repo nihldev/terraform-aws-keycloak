@@ -94,6 +94,16 @@ output "admin_credentials_secret_arn" {
   value       = aws_secretsmanager_secret.keycloak_admin.arn
 }
 
+output "admin_credentials_secret_id" {
+  description = "Secret ID for retrieving admin credentials (use with AWS CLI: aws secretsmanager get-secret-value --secret-id <this-value>)"
+  value       = aws_secretsmanager_secret.keycloak_admin.id
+}
+
+output "db_credentials_secret_id" {
+  description = "Secret ID for retrieving database credentials (use with AWS CLI: aws secretsmanager get-secret-value --secret-id <this-value>)"
+  value       = aws_secretsmanager_secret.keycloak_db.id
+}
+
 #######################
 # Security Group Outputs
 #######################

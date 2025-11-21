@@ -23,8 +23,60 @@ This module deploys Keycloak on AWS using ECS Fargate, RDS PostgreSQL, and Appli
 
 - Terraform >= 1.14.0
 - AWS Provider ~> 5.0
-- Existing VPC with public and private subnets
+- Existing VPC with public and private subnets (see Network Prerequisites below)
 - (Optional) ACM certificate for HTTPS
+
+### Network Prerequisites
+
+Your VPC must have the following configuration:
+
+**Subnets:**
+- **Public subnets** (for ALB):
+  - Minimum 2 subnets (3 recommended for production)
+  - Must be in different Availability Zones
+  - Must have internet gateway attached
+  - Route table with `0.0.0.0/0` → Internet Gateway
+- **Private subnets** (for ECS and RDS):
+  - Minimum 2 subnets (3 recommended for production)
+  - Must be in different Availability Zones
+  - Must have NAT Gateway for outbound internet access
+  - Route table with `0.0.0.0/0` → NAT Gateway
+
+**NAT Gateway:**
+- Required for ECS tasks to:
+  - Pull container images from quay.io
+  - Connect to external identity providers
+  - Perform software updates
+- Can use single NAT Gateway for dev (cost savings)
+- Should use one NAT Gateway per AZ for production (high availability)
+
+**Subnet Sizing:**
+- Public subnets: `/24` (256 IPs) - sufficient for ALBs
+- Private subnets: `/22` or larger recommended
+  - Each ECS task needs an IP address
+  - Each RDS instance needs an IP address
+  - Example: `/22` = 1,024 IPs
+
+**DNS:**
+- `enable_dns_hostnames = true`
+- `enable_dns_support = true`
+
+**Example VPC Setup:**
+```
+VPC: 10.0.0.0/16
+├── Public Subnets (ALB):
+│   ├── 10.0.101.0/24 (us-east-1a)
+│   ├── 10.0.102.0/24 (us-east-1b)
+│   └── 10.0.103.0/24 (us-east-1c)
+├── Private Subnets (ECS + RDS):
+│   ├── 10.0.1.0/22 (us-east-1a) - 1,024 IPs
+│   ├── 10.0.5.0/22 (us-east-1b) - 1,024 IPs
+│   └── 10.0.9.0/22 (us-east-1c) - 1,024 IPs
+└── NAT Gateways:
+    ├── NAT-GW in us-east-1a (or single NAT for dev)
+    ├── NAT-GW in us-east-1b (production)
+    └── NAT-GW in us-east-1c (production)
+```
 
 ## Architecture
 
@@ -37,8 +89,8 @@ Internet → ALB (Public Subnets) → ECS Fargate (Private Subnets) → RDS Post
 ### Basic Example (Development)
 
 ```hcl
-module "Keycloak" {
-  source = "./modules/Keycloak"
+module "keycloak" {
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "dev"
@@ -62,8 +114,8 @@ module "Keycloak" {
 ### Production Example
 
 ```hcl
-module "Keycloak" {
-  source = "./modules/Keycloak"
+module "keycloak" {
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "prod"
@@ -74,7 +126,7 @@ module "Keycloak" {
   private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb", "subnet-ccccc"]
 
   # HTTPS with custom domain
-  certificate_arn    = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+  certificate_arn    = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
   keycloak_hostname  = "auth.example.com"
 
   # High availability
@@ -86,10 +138,10 @@ module "Keycloak" {
   task_memory = 4096
 
   # Production database
-  db_instance_class         = "db.r6g.large"
-  db_allocated_storage      = 100
+  db_instance_class          = "db.r6g.large"
+  db_allocated_storage       = 100
   db_backup_retention_period = 30
-  db_deletion_protection    = true
+  db_deletion_protection     = true
 
   tags = {
     Project     = "MyApp"
@@ -103,7 +155,7 @@ module "Keycloak" {
 
 ```hcl
 # Request ACM certificate
-resource "aws_acm_certificate" "Keycloak" {
+resource "aws_acm_certificate" "keycloak" {
   domain_name       = "auth.example.com"
   validation_method = "DNS"
 
@@ -115,7 +167,7 @@ resource "aws_acm_certificate" "Keycloak" {
 # Create Route53 record for validation
 resource "aws_route53_record" "cert_validation" {
   for_each = {
-    for dvo in aws_acm_certificate.Keycloak.domain_validation_options : dvo.domain_name => {
+    for dvo in aws_acm_certificate.keycloak.domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
@@ -130,14 +182,14 @@ resource "aws_route53_record" "cert_validation" {
 }
 
 # Wait for certificate validation
-resource "aws_acm_certificate_validation" "Keycloak" {
-  certificate_arn         = aws_acm_certificate.Keycloak.arn
+resource "aws_acm_certificate_validation" "keycloak" {
+  certificate_arn         = aws_acm_certificate.keycloak.arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
 # Deploy Keycloak
-module "Keycloak" {
-  source = "./modules/Keycloak"
+module "keycloak" {
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "prod"
@@ -146,7 +198,7 @@ module "Keycloak" {
   public_subnet_ids  = var.public_subnet_ids
   private_subnet_ids = var.private_subnet_ids
 
-  certificate_arn   = aws_acm_certificate.Keycloak.arn
+  certificate_arn   = aws_acm_certificate.keycloak.arn
   keycloak_hostname = "auth.example.com"
 
   multi_az      = true
@@ -154,14 +206,14 @@ module "Keycloak" {
 }
 
 # Create DNS record pointing to ALB
-resource "aws_route53_record" "Keycloak" {
+resource "aws_route53_record" "keycloak" {
   zone_id = var.route53_zone_id
   name    = "auth.example.com"
   type    = "A"
 
   alias {
-    name                   = module.Keycloak.alb_dns_name
-    zone_id                = module.Keycloak.alb_zone_id
+    name                   = module.keycloak.alb_dns_name
+    zone_id                = module.keycloak.alb_zone_id
     evaluate_target_health = true
   }
 }
