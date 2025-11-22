@@ -226,16 +226,14 @@ resource "aws_ecs_service" "keycloak" {
 
   health_check_grace_period_seconds = var.health_check_grace_period_seconds
 
+  # Deployment configuration for zero-downtime updates
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
+
   # Deployment circuit breaker for automatic rollback on failures
   deployment_circuit_breaker {
     enable   = true
     rollback = true
-  }
-
-  # Deployment configuration for zero-downtime updates
-  deployment_configuration {
-    minimum_healthy_percent = 100
-    maximum_percent         = 200
   }
 
   # Note: ordered_placement_strategy is not supported for Fargate launch type
@@ -260,7 +258,7 @@ resource "aws_ecs_service" "keycloak" {
 #######################
 
 resource "aws_appautoscaling_target" "keycloak" {
-  max_capacity       = var.desired_count * 3
+  max_capacity       = var.autoscaling_max_capacity != null ? var.autoscaling_max_capacity : var.desired_count * 3
   min_capacity       = var.desired_count
   resource_id        = "service/${aws_ecs_cluster.keycloak.name}/${aws_ecs_service.keycloak.name}"
   scalable_dimension = "ecs:service:DesiredCount"

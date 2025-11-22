@@ -9,6 +9,14 @@ exclude:
   # in the external terraform-aws-modules/vpc/aws module
   - aws-ec2-require-vpc-flow-logs-for-all-vpcs
 
+  # CloudWatch log encryption with KMS is optional (user can provide kms_key_id via variable)
+  # Default AWS managed encryption is sufficient for most use cases
+  - aws-cloudwatch-log-group-customer-key
+
+  # IAM database authentication is optional (user can enable via variable)
+  # Default password authentication with Secrets Manager is secure for most use cases
+  - aws-rds-enable-iam-auth
+
 # Custom checks
 severity_overrides:
   # Elevate KMS-related checks to HIGH severity

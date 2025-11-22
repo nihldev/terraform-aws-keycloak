@@ -2,6 +2,40 @@
 # ECS Task Execution Role
 # Used by ECS to pull images and publish logs
 #######################
+#
+# IMPORTANT: KMS Key Permissions
+# If you provide custom KMS keys via db_kms_key_id or secrets_kms_key_id variables,
+# ensure your KMS key policy grants the following permissions:
+#
+# For db_kms_key_id (RDS encryption):
+# - kms:Decrypt, kms:DescribeKey, kms:CreateGrant to this execution role
+#
+# For secrets_kms_key_id (Secrets Manager encryption):
+# - kms:Decrypt, kms:DescribeKey to this execution role
+#
+# Example KMS key policy statement:
+# {
+#   "Sid": "Allow ECS task execution role to decrypt",
+#   "Effect": "Allow",
+#   "Principal": {
+#     "AWS": "arn:aws:iam::ACCOUNT_ID:role/EXECUTION_ROLE_NAME"
+#   },
+#   "Action": [
+#     "kms:Decrypt",
+#     "kms:DescribeKey",
+#     "kms:CreateGrant"
+#   ],
+#   "Resource": "*",
+#   "Condition": {
+#     "StringEquals": {
+#       "kms:ViaService": [
+#         "secretsmanager.REGION.amazonaws.com",
+#         "rds.REGION.amazonaws.com"
+#       ]
+#     }
+#   }
+# }
+#######################
 
 data "aws_iam_policy_document" "ecs_task_execution_assume_role" {
   statement {

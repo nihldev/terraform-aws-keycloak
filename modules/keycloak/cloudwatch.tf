@@ -4,7 +4,7 @@
 
 resource "aws_cloudwatch_log_group" "keycloak" {
   name              = "/ecs/${var.name}-keycloak-${var.environment}"
-  retention_in_days = var.environment == "prod" ? 30 : 7
+  retention_in_days = var.cloudwatch_log_retention_days != null ? var.cloudwatch_log_retention_days : (var.environment == "prod" ? 30 : 7)
 
   tags = merge(
     var.tags,

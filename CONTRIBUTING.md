@@ -82,6 +82,7 @@ Pre-push hooks run automatically when you push to the remote repository and will
 The hooks are automatically installed by mise as pre-push hooks. No manual setup required!
 
 **Why pre-push instead of pre-commit?**
+
 - Faster development workflow - checks run before push, not on every commit
 - Still catches issues before they reach the remote repository
 - Run checks manually anytime with `mise run check`
@@ -384,11 +385,13 @@ Terraform validate
 All code is automatically scanned with multiple tools on push:
 
 **tfsec** - Security scanner (minimum severity: LOW)
+
 ```bash
 tfsec . --minimum-severity=LOW
 ```
 
 **Conftest/OPA** - Custom policy validation
+
 ```bash
 conftest test --policy policy/ modules/
 ```
@@ -437,8 +440,8 @@ This repository uses comprehensive automated checks to catch issues before code 
 
 | Check | What It Catches | Auto-Fix | Tool |
 |-------|----------------|----------|------|
-| **Terraform Format** | Inconsistent code formatting | ✅ Yes | terraform fmt |
-| **Terraform Validate** | Syntax errors, invalid references | ❌ No | terraform validate |
+| **Terraform Format** | Inconsistent code formatting | ✅ Yes | Terraform fmt |
+| **Terraform Validate** | Syntax errors, invalid references | ❌ No | Terraform validate |
 | **TFLint** | Deprecated resources, naming violations, undocumented variables | ❌ No | tflint |
 | **TFSec** | Security issues, missing encryption, public resources | ❌ No | tfsec |
 | **OPA Policies** | Keycloak-specific config issues | ❌ No | conftest |
@@ -451,9 +454,10 @@ This repository uses comprehensive automated checks to catch issues before code 
 
 This repository uses Open Policy Agent (OPA) policies via Conftest for application-specific validations that standard linters can't catch.
 
-**Location**: `policy/keycloak.rego`
+**Location**: `policy/Keycloak.rego`
 
 **What it checks**:
+
 - Multi-instance cache configuration (prevents cache inconsistencies)
 - Keycloak hostname strict backchannel settings (prevents health check failures)
 - ECS deployment circuit breakers (enables automatic rollback)
@@ -462,11 +466,13 @@ This repository uses Open Policy Agent (OPA) policies via Conftest for applicati
 - Database connection pool configuration
 
 **Run manually**:
+
 ```bash
-conftest test --policy policy/ modules/keycloak/
+conftest test --policy policy/ modules/Keycloak/
 ```
 
 **Writing custom policies**:
+
 ```rego
 package main
 
@@ -481,7 +487,7 @@ deny contains msg if {
 
 ### tfvars.example Coverage
 
-A custom script validates that all module variables are documented in `terraform.tfvars.example`:
+A custom script validates that all module variables are documented in `Terraform.tfvars.example`:
 
 ```bash
 ./scripts/check-tfvars-coverage.sh
@@ -506,14 +512,16 @@ Some issues require human judgment and code review:
 If a check incorrectly flags valid code, document why it's safe and suppress:
 
 **TFSec:**
+
 ```hcl
-#tfsec:ignore:aws-xxx-check-id
+#tfsec:ignore:AWS-xxx-check-id
 resource "aws_xxx" "example" {
   # Reason: Explain why this is intentional/safe
 }
 ```
 
 **TFLint:**
+
 ```hcl
 # tflint-ignore: rule_name
 resource "aws_xxx" "example" {

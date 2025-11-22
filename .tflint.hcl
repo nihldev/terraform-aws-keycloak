@@ -77,9 +77,8 @@ rule "aws_db_instance_previous_type" {
   enabled = true
 }
 
-rule "aws_ecs_task_definition_previous_container_runtime" {
-  enabled = true
-}
+# Note: aws_ecs_task_definition_previous_container_runtime rule doesn't exist in current plugin version
+# Removed to prevent errors
 
 rule "aws_instance_previous_type" {
   enabled = true

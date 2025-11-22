@@ -31,6 +31,7 @@ This module deploys Keycloak on AWS using ECS Fargate, RDS PostgreSQL, and Appli
 Your VPC must have the following configuration:
 
 **Subnets:**
+
 - **Public subnets** (for ALB):
   - Minimum 2 subnets (3 recommended for production)
   - Must be in different Availability Zones
@@ -43,6 +44,7 @@ Your VPC must have the following configuration:
   - Route table with `0.0.0.0/0` → NAT Gateway
 
 **NAT Gateway:**
+
 - Required for ECS tasks to:
   - Pull container images from quay.io
   - Connect to external identity providers
@@ -51,6 +53,7 @@ Your VPC must have the following configuration:
 - Should use one NAT Gateway per AZ for production (high availability)
 
 **Subnet Sizing:**
+
 - Public subnets: `/24` (256 IPs) - sufficient for ALBs
 - Private subnets: `/22` or larger recommended
   - Each ECS task needs an IP address
@@ -58,11 +61,13 @@ Your VPC must have the following configuration:
   - Example: `/22` = 1,024 IPs
 
 **DNS:**
+
 - `enable_dns_hostnames = true`
 - `enable_dns_support = true`
 
 **Example VPC Setup:**
-```
+
+```text
 VPC: 10.0.0.0/16
 ├── Public Subnets (ALB):
 │   ├── 10.0.101.0/24 (us-east-1a)
@@ -89,8 +94,8 @@ Internet → ALB (Public Subnets) → ECS Fargate (Private Subnets) → RDS Post
 ### Basic Example (Development)
 
 ```hcl
-module "keycloak" {
-  source = "./modules/keycloak"
+module "Keycloak" {
+  source = "./modules/Keycloak"
 
   name        = "myapp"
   environment = "dev"
@@ -114,8 +119,8 @@ module "keycloak" {
 ### Production Example
 
 ```hcl
-module "keycloak" {
-  source = "./modules/keycloak"
+module "Keycloak" {
+  source = "./modules/Keycloak"
 
   name        = "myapp"
   environment = "prod"
@@ -126,7 +131,7 @@ module "keycloak" {
   private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb", "subnet-ccccc"]
 
   # HTTPS with custom domain
-  certificate_arn    = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
+  certificate_arn    = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
   keycloak_hostname  = "auth.example.com"
 
   # High availability
@@ -155,7 +160,7 @@ module "keycloak" {
 
 ```hcl
 # Request ACM certificate
-resource "aws_acm_certificate" "keycloak" {
+resource "aws_acm_certificate" "Keycloak" {
   domain_name       = "auth.example.com"
   validation_method = "DNS"
 
@@ -167,7 +172,7 @@ resource "aws_acm_certificate" "keycloak" {
 # Create Route53 record for validation
 resource "aws_route53_record" "cert_validation" {
   for_each = {
-    for dvo in aws_acm_certificate.keycloak.domain_validation_options : dvo.domain_name => {
+    for dvo in aws_acm_certificate.Keycloak.domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
@@ -182,14 +187,14 @@ resource "aws_route53_record" "cert_validation" {
 }
 
 # Wait for certificate validation
-resource "aws_acm_certificate_validation" "keycloak" {
-  certificate_arn         = aws_acm_certificate.keycloak.arn
+resource "aws_acm_certificate_validation" "Keycloak" {
+  certificate_arn         = aws_acm_certificate.Keycloak.arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
 # Deploy Keycloak
-module "keycloak" {
-  source = "./modules/keycloak"
+module "Keycloak" {
+  source = "./modules/Keycloak"
 
   name        = "myapp"
   environment = "prod"
@@ -198,7 +203,7 @@ module "keycloak" {
   public_subnet_ids  = var.public_subnet_ids
   private_subnet_ids = var.private_subnet_ids
 
-  certificate_arn   = aws_acm_certificate.keycloak.arn
+  certificate_arn   = aws_acm_certificate.Keycloak.arn
   keycloak_hostname = "auth.example.com"
 
   multi_az      = true
@@ -206,14 +211,14 @@ module "keycloak" {
 }
 
 # Create DNS record pointing to ALB
-resource "aws_route53_record" "keycloak" {
+resource "aws_route53_record" "Keycloak" {
   zone_id = var.route53_zone_id
   name    = "auth.example.com"
   type    = "A"
 
   alias {
-    name                   = module.keycloak.alb_dns_name
-    zone_id                = module.keycloak.alb_zone_id
+    name                   = module.Keycloak.alb_dns_name
+    zone_id                = module.Keycloak.alb_zone_id
     evaluate_target_health = true
   }
 }
@@ -242,28 +247,94 @@ After deployment:
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | -------- |
-| name | Name prefix for all resources | string | - | yes |
-| environment | Environment name (e.g., dev, staging, prod) | string | - | yes |
-| vpc_id | VPC ID where resources will be created | string | - | yes |
-| public_subnet_ids | Public subnet IDs for ALB | list(string) | - | yes |
-| private_subnet_ids | Private subnet IDs for ECS and RDS | list(string) | - | yes |
-| allowed_cidr_blocks | CIDR blocks allowed to access Keycloak | list(string) | ["0.0.0.0/0"] | no |
-| certificate_arn | ACM certificate ARN for HTTPS | string | "" | no |
-| multi_az | Enable multi-AZ deployment | bool | false | no |
-| Keycloak_version | Keycloak version to deploy | string | "26.0" | no |
-| desired_count | Number of Keycloak tasks | number | 2 | no |
-| task_cpu | CPU units for task (1024 = 1 vCPU) | number | 1024 | no |
-| task_memory | Memory for task in MB | number | 2048 | no |
-| db_instance_class | RDS instance class | string | "db.t4g.micro" | no |
-| db_allocated_storage | RDS storage in GB | number | 20 | no |
-| db_engine_version | PostgreSQL version | string | "16.3" | no |
-| db_backup_retention_period | Backup retention in days | number | 7 | no |
-| db_deletion_protection | Enable deletion protection | bool | true | no |
-| Keycloak_hostname | Keycloak hostname (required for production) | string | "" | no |
-| Keycloak_loglevel | Log level (INFO, DEBUG, WARN, ERROR) | string | "INFO" | no |
-| tags | Additional tags for resources | map(string) | {} | no |
+### Required Variables
+
+| Name | Description | Type |
+| ---- | ----------- | ---- |
+| name | Name prefix for all resources | string |
+| environment | Environment name (e.g., dev, staging, prod) | string |
+| vpc_id | VPC ID where resources will be created | string |
+| public_subnet_ids | Public subnet IDs for ALB (minimum 2, in different AZs) | list(string) |
+| private_subnet_ids | Private subnet IDs for ECS and RDS (minimum 2, in different AZs) | list(string) |
+
+### Networking & Security
+
+| Name | Description | Type | Default |
+| ---- | ----------- | ---- | ------- |
+| allowed_cidr_blocks | CIDR blocks allowed to access Keycloak (⚠️ 0.0.0.0/0 not allowed for prod) | list(string) | ["0.0.0.0/0"] |
+| certificate_arn | ACM certificate ARN for HTTPS | string | "" |
+| waf_acl_arn | AWS WAF WebACL ARN (🔴 REQUIRED for prod) | string | "" |
+| alb_deletion_protection | Enable ALB deletion protection | bool | true for prod, false otherwise |
+| alb_access_logs_enabled | Enable ALB access logs | bool | false |
+| alb_access_logs_bucket | S3 bucket for ALB logs | string | "" |
+| alb_access_logs_prefix | S3 prefix for ALB logs | string | "" |
+
+### High Availability
+
+| Name | Description | Type | Default |
+| ---- | ----------- | ---- | ------- |
+| multi_az | Enable multi-AZ deployment | bool | false |
+| desired_count | Number of Keycloak tasks | number | 2 |
+| autoscaling_max_capacity | Maximum tasks for autoscaling | number | desired_count * 3 |
+
+### ECS Configuration
+
+| Name | Description | Type | Default |
+| ---- | ----------- | ---- | ------- |
+| Keycloak_version | Keycloak version to deploy | string | "26.0" |
+| task_cpu | CPU units (1024 = 1 vCPU) | number | 1024 |
+| task_memory | Memory in MB | number | 2048 |
+| enable_container_insights | Enable CloudWatch Container Insights | bool | true |
+| health_check_grace_period_seconds | ECS health check grace period | number | 600 |
+
+### RDS Configuration
+
+| Name | Description | Type | Default |
+| ---- | ----------- | ---- | ------- |
+| db_instance_class | RDS instance class | string | "db.t4g.micro" |
+| db_allocated_storage | Storage in GB | number | 20 |
+| db_max_allocated_storage | Max storage for autoscaling | number | 100 |
+| db_engine_version | PostgreSQL version | string | "16.3" |
+| db_backup_retention_period | Backup retention days | number | 7 |
+| db_backup_window | Backup window | string | "03:00-04:00" |
+| db_maintenance_window | Maintenance window | string | "sun:04:00-sun:05:00" |
+| db_deletion_protection | Enable deletion protection | bool | true |
+| db_skip_final_snapshot | Skip final snapshot on destroy | bool | false |
+| db_kms_key_id | KMS key for RDS encryption | string | "" (AWS managed) |
+| db_performance_insights_retention_period | Performance Insights retention | number | 7 |
+| db_iam_database_authentication_enabled | Enable IAM auth | bool | false |
+
+### Keycloak Configuration
+
+| Name | Description | Type | Default |
+| ---- | ----------- | ---- | ------- |
+| Keycloak_hostname | Keycloak hostname (recommended for prod) | string | "" |
+| Keycloak_admin_username | Admin username | string | "admin" |
+| Keycloak_loglevel | Log level (INFO, DEBUG, WARN, ERROR) | string | "INFO" |
+| Keycloak_extra_env_vars | Additional environment variables | map(string) | {} |
+| Keycloak_cache_enabled | Enable distributed cache | bool | true |
+| Keycloak_cache_stack | Cache protocol (tcp, udp, jdbc-ping) | string | "jdbc-ping" |
+| db_pool_initial_size | Initial connection pool size | number | 5 |
+| db_pool_min_size | Minimum connection pool size | number | 5 |
+| db_pool_max_size | Maximum connection pool size | number | 20 |
+
+### Monitoring
+
+| Name | Description | Type | Default |
+| ---- | ----------- | ---- | ------- |
+| cloudwatch_log_retention_days | Log retention in days | number | 30 for prod, 7 otherwise |
+
+### Encryption
+
+| Name | Description | Type | Default |
+| ---- | ----------- | ---- | ------- |
+| secrets_kms_key_id | KMS key for Secrets Manager | string | "" (AWS managed) |
+
+### Tags
+
+| Name | Description | Type | Default |
+| ---- | ----------- | ---- | ------- |
+| tags | Additional resource tags | map(string) | {} |
 
 ## Outputs
 
@@ -308,12 +379,190 @@ Estimated cost: ~$300-500/month (varies by region and usage)
 
 ## Security Considerations
 
-1. **Network Security**: Deploy in private subnets, use security groups with minimal access
-2. **Secrets**: All credentials stored in Secrets Manager, never in code
-3. **Encryption**: RDS storage encrypted at rest
-4. **HTTPS**: Always use ACM certificates for production
-5. **Access Control**: Restrict `allowed_cidr_blocks` to known IP ranges
-6. **Deletion Protection**: Enabled by default for RDS in production
+### Production Security Checklist
+
+1. **WAF Protection** (🔴 Required for prod):
+   - Protects against OWASP Top 10, DDoS, and credential stuffing
+   - See [WAF Setup Guide](#waf-setup-guide) below
+   - Cost: ~$5-10/month + $0.60 per million requests
+
+2. **Network Security**:
+   - Deploy in private subnets with NAT Gateway
+   - Use security groups with minimal access
+   - Restrict `allowed_cidr_blocks` to known IP ranges (no 0.0.0.0/0 in prod)
+
+3. **Secrets Management**:
+   - All credentials stored in Secrets Manager
+   - Never commit secrets to code
+   - Optional: Use custom KMS keys for additional control
+
+4. **Encryption**:
+   - RDS storage encrypted at rest (default: AWS managed keys)
+   - Secrets encrypted in Secrets Manager
+   - Optional: Provide custom KMS keys via `db_kms_key_id` and `secrets_kms_key_id`
+
+5. **HTTPS**:
+   - Always use ACM certificates for production
+   - TLS 1.3 enforced on ALB
+   - Automatic HTTP → HTTPS redirect
+
+6. **Deletion Protection**:
+   - Enabled by default for RDS in production
+   - Enabled by default for ALB in production
+   - Prevents accidental deletion
+
+7. **Monitoring**:
+   - CloudWatch alarms for critical metrics
+   - Container Insights for ECS performance
+   - RDS Performance Insights enabled
+
+### WAF Setup Guide
+
+For production deployments, you must configure AWS WAF. Here's a quick setup:
+
+```hcl
+# Create WAF WebACL with AWS Managed Rules
+resource "aws_wafv2_web_acl" "Keycloak" {
+  name  = "${var.name}-Keycloak-${var.environment}"
+  scope = "REGIONAL"
+
+  default_action {
+    allow {}
+  }
+
+  # Core Rule Set - protects against OWASP Top 10
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 1
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        vendor_name = "AWS"
+        name        = "AWSManagedRulesCommonRuleSet"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesCommonRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Known Bad Inputs - blocks known malicious patterns
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        vendor_name = "AWS"
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesKnownBadInputsRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Rate limiting - prevent brute force attacks
+  rule {
+    name     = "RateLimitRule"
+    priority = 3
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = 2000  # requests per 5 minutes per IP
+        aggregate_key_type = "IP"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimitRule"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${var.name}-Keycloak-${var.environment}"
+    sampled_requests_enabled   = true
+  }
+
+  tags = {
+    Name        = "${var.name}-Keycloak-${var.environment}"
+    Environment = var.environment
+  }
+}
+
+# Use the WAF with Keycloak module
+module "Keycloak" {
+  source = "./modules/Keycloak"
+
+  # ... other variables ...
+  waf_acl_arn = aws_wafv2_web_acl.Keycloak.arn
+}
+```
+
+### KMS Key Permissions
+
+If you provide custom KMS keys, ensure the following permissions are granted:
+
+**For RDS encryption** (`db_kms_key_id`):
+
+```json
+{
+  "Sid": "Allow RDS to use the key",
+  "Effect": "Allow",
+  "Principal": {
+    "Service": "RDS.amazonaws.com"
+  },
+  "Action": [
+    "kms:Decrypt",
+    "kms:CreateGrant",
+    "kms:DescribeKey"
+  ],
+  "Resource": "*"
+}
+```
+
+**For Secrets Manager** (`secrets_kms_key_id`):
+
+```json
+{
+  "Sid": "Allow ECS task execution role",
+  "Effect": "Allow",
+  "Principal": {
+    "AWS": "arn:AWS:iam::ACCOUNT_ID:role/EXECUTION_ROLE_NAME"
+  },
+  "Action": [
+    "kms:Decrypt",
+    "kms:DescribeKey"
+  ],
+  "Resource": "*",
+  "Condition": {
+    "StringEquals": {
+      "kms:ViaService": "secretsmanager.REGION.amazonaws.com"
+    }
+  }
+}
+```
 
 ## Monitoring
 
@@ -340,7 +589,37 @@ The module automatically scales ECS tasks based on:
 Limits:
 
 - Min: `desired_count`
-- Max: `desired_count * 3`
+- Max: `autoscaling_max_capacity` (defaults to `desired_count * 3`)
+
+### Database Connection Pool Sizing
+
+**Critical**: Total database connections = `desired_count` × `db_pool_max_size`
+
+This must be LESS than your RDS `max_connections`:
+
+| Instance Class | Max Connections | Safe Config Examples                     |
+|----------------|-----------------|------------------------------------------|
+| db.t4g.micro   | ~85             | 2 tasks × 20 pool = 40 connections       |
+| db.t4g.small   | ~410            | 5 tasks × 30 pool = 150 connections      |
+| db.t4g.medium  | ~820            | 10 tasks × 40 pool = 400 connections     |
+| db.r6g.large   | ~1000           | 20 tasks × 40 pool = 800 connections     |
+
+**Best Practices**:
+
+- Leave 20% headroom for admin connections and spikes
+- For autoscaling: calculate based on `autoscaling_max_capacity`, not `desired_count`
+- Monitor RDS DatabaseConnections metric in CloudWatch
+- Adjust pool size before increasing task count
+
+**Example for production**:
+
+```hcl
+# 5 tasks with autoscaling to 15
+desired_count            = 5
+autoscaling_max_capacity = 15
+db_pool_max_size        = 30  # 15 tasks × 30 = 450 connections
+db_instance_class       = "db.t4g.small"  # supports 410+ connections
+```
 
 ## Maintenance
 

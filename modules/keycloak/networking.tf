@@ -120,7 +120,7 @@ resource "aws_lb" "keycloak" {
   security_groups    = [aws_security_group.alb.id]
   subnets            = var.public_subnet_ids
 
-  enable_deletion_protection = var.environment == "prod" ? true : false
+  enable_deletion_protection = var.alb_deletion_protection != null ? var.alb_deletion_protection : (var.environment == "prod" ? true : false)
   enable_http2               = true
   drop_invalid_header_fields = true
 
@@ -140,6 +140,16 @@ resource "aws_lb" "keycloak" {
       Environment = var.environment
     }
   )
+}
+
+#######################
+# WAF Association (Optional)
+#######################
+
+resource "aws_wafv2_web_acl_association" "keycloak" {
+  count        = var.waf_acl_arn != "" ? 1 : 0
+  resource_arn = aws_lb.keycloak.arn
+  web_acl_arn  = var.waf_acl_arn
 }
 
 #######################

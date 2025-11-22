@@ -87,6 +87,72 @@ variable "alb_access_logs_prefix" {
   default     = ""
 }
 
+variable "alb_deletion_protection" {
+  description = "Enable deletion protection for ALB (defaults to true for prod environment)"
+  type        = bool
+  default     = null
+}
+
+variable "waf_acl_arn" {
+  description = "ARN of AWS WAF WebACL to associate with ALB (STRONGLY RECOMMENDED for production environments to protect against web exploits, DDoS, and credential stuffing attacks)"
+  type        = string
+  default     = ""
+
+  validation {
+    condition = !(
+      var.environment == "prod" &&
+      var.waf_acl_arn == ""
+    )
+    error_message = <<-EOT
+      SECURITY WARNING: Production environment detected without WAF protection.
+
+      Keycloak is a high-value authentication target and should be protected with AWS WAF.
+      WAF provides protection against:
+      - SQL injection and XSS attacks
+      - DDoS and bot attacks
+      - Brute force login attempts
+      - Known CVE exploits
+
+      Create a WAF WebACL and provide its ARN via waf_acl_arn variable.
+
+      Quick setup with AWS Managed Rules:
+      1. Create WAF WebACL with Core Rule Set (protects against OWASP Top 10)
+      2. Add Known Bad Inputs rule set (blocks known malicious patterns)
+      3. Add Rate-based rule (prevents brute force attacks)
+
+      Example Terraform:
+        resource "aws_wafv2_web_acl" "keycloak" {
+          name  = "keycloak-protection"
+          scope = "REGIONAL"
+
+          default_action {
+            allow {}
+          }
+
+          rule {
+            name     = "AWSManagedRulesCommonRuleSet"
+            priority = 1
+            override_action { none {} }
+            statement {
+              managed_rule_group_statement {
+                vendor_name = "AWS"
+                name        = "AWSManagedRulesCommonRuleSet"
+              }
+            }
+            visibility_config {
+              cloudwatch_metrics_enabled = true
+              metric_name                = "AWSManagedRulesCommonRuleSet"
+              sampled_requests_enabled   = true
+            }
+          }
+        }
+
+      If you truly need to deploy without WAF, set environment to something other than "prod".
+      Cost: ~$5-10/month + $0.60 per million requests - essential for production identity systems.
+    EOT
+  }
+}
+
 #######################
 # High Availability
 #######################
@@ -131,10 +197,29 @@ variable "enable_container_insights" {
   default     = true
 }
 
-variable "health_check_grace_period_seconds" {
-  description = "Health check grace period for ECS service"
+variable "cloudwatch_log_retention_days" {
+  description = "CloudWatch log retention in days (defaults to 30 for prod, 7 for non-prod)"
   type        = number
-  default     = 300
+  default     = null
+
+  validation {
+    condition = var.cloudwatch_log_retention_days == null || contains([
+      1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653
+    ], var.cloudwatch_log_retention_days)
+    error_message = "CloudWatch log retention must be one of the valid values: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653 days."
+  }
+}
+
+variable "health_check_grace_period_seconds" {
+  description = "Health check grace period for ECS service (600 recommended for initial deployments)"
+  type        = number
+  default     = 600
+}
+
+variable "autoscaling_max_capacity" {
+  description = "Maximum number of tasks for autoscaling (defaults to desired_count * 3 if not set)"
+  type        = number
+  default     = null
 }
 
 #######################
@@ -277,7 +362,25 @@ variable "db_pool_min_size" {
 }
 
 variable "db_pool_max_size" {
-  description = "Maximum size of database connection pool"
+  description = <<-EOT
+    Maximum size of database connection pool per Keycloak instance.
+
+    IMPORTANT: Calculate total connections carefully:
+    Total connections = desired_count * db_pool_max_size
+
+    This must be LESS than your RDS max_connections setting:
+    - db.t4g.micro:  ~85 connections available
+    - db.t4g.small:  ~410 connections available
+    - db.t4g.medium: ~820 connections available
+    - db.r6g.large:  ~1000 connections available
+
+    Examples:
+    - desired_count=2, db_pool_max_size=20 → 40 total (safe for db.t4g.micro)
+    - desired_count=3, db_pool_max_size=30 → 90 total (requires at least db.t4g.small)
+    - desired_count=10, db_pool_max_size=20 → 200 total (requires at least db.t4g.small)
+
+    Leave ~20% headroom for administrative connections and connection spikes.
+  EOT
   type        = number
   default     = 20
 }
