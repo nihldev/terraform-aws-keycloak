@@ -102,6 +102,7 @@ resource "aws_db_instance" "keycloak" {
   vpc_security_group_ids = [aws_security_group.rds.id]
   publicly_accessible    = false
 
+  # tfsec:ignore:aws-rds-specify-backup-retention Backup retention is configurable with validation ensuring minimum 7 days
   backup_retention_period = var.db_backup_retention_period
   backup_window           = var.db_backup_window
   maintenance_window      = var.db_maintenance_window

@@ -1,0 +1,166 @@
+name: Terraform Tests
+
+on:
+  pull_request:
+    paths:
+      - 'modules/keycloak/**'
+      - 'examples/**'
+      - 'tests/**'
+      - '.github/workflows/terraform-tests.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'modules/keycloak/**'
+      - 'examples/**'
+      - 'tests/**'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  validation:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.0"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init (Module)
+        working-directory: modules/keycloak
+        run: terraform init -backend=false
+
+      - name: Terraform Validate (Module)
+        working-directory: modules/keycloak
+        run: terraform validate
+
+  plan-tests:
+    name: Plan-Only Tests
+    runs-on: ubuntu-latest
+    needs: validation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.0"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          # Use OIDC or long-term credentials
+          # role-to-assume: ${{ secrets.AWS_TEST_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run Module Validation Test
+        run: terraform test ./tests/module_validation.tftest.hcl -verbose
+        continue-on-error: false
+
+  # Commented out: Full integration tests (expensive and time-consuming)
+  # Uncomment to run full deployment tests in CI/CD
+  #
+  # integration-tests:
+  #   name: Integration Tests
+  #   runs-on: ubuntu-latest
+  #   needs: plan-tests
+  #
+  #   # Only run on main branch or manual trigger to save costs
+  #   if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+  #
+  #   strategy:
+  #     matrix:
+  #       test:
+  #         - examples_basic
+  #         # - examples_complete  # Takes longer and costs more
+  #
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: "1.14.0"
+  #
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-region: us-east-1
+  #         role-to-assume: ${{ secrets.AWS_TEST_ROLE_ARN }}
+  #
+  #     - name: Run Test - ${{ matrix.test }}
+  #       run: |
+  #         terraform test ./tests/${{ matrix.test }}.tftest.hcl -verbose
+  #       timeout-minutes: 45
+  #
+  #     - name: Cleanup on Failure
+  #       if: failure()
+  #       run: |
+  #         cd examples/${{ matrix.test }}
+  #         terraform destroy -auto-approve
+  #       continue-on-error: true
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: validation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.0"
+
+      - name: Setup TFSec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: modules/keycloak
+          soft_fail: false
+
+      - name: Run TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.54.0
+
+      - name: Init TFLint
+        working-directory: modules/keycloak
+        run: tflint --init
+
+      - name: Run TFLint
+        working-directory: modules/keycloak
+        run: tflint -f compact
+
+  status-check:
+    name: Status Check
+    runs-on: ubuntu-latest
+    needs:
+      - validation
+      - plan-tests
+      - security-scan
+    if: always()
+
+    steps:
+      - name: Check Results
+        run: |
+          if [ "${{ needs.validation.result }}" != "success" ] || \
+             [ "${{ needs.plan-tests.result }}" != "success" ] || \
+             [ "${{ needs.security-scan.result }}" != "success" ]; then
+            echo "One or more checks failed"
+            exit 1
+          fi
+          echo "All checks passed!"

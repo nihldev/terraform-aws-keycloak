@@ -53,3 +53,15 @@ run         = "markdownlint-cli2 '**/*.md'"
 [tasks.validate]
 description = "Validate all Terraform configurations"
 run         = "find . -type f -name '*.tf' -not -path '*/.terraform/*' -exec dirname {} \\; | sort -u | xargs -I {} sh -c 'echo \"Validating {}\" && terraform -chdir={} init -backend=false && terraform -chdir={} validate'"
+
+[tasks.coverage]
+description = "Check test coverage for modules"
+run         = "./scripts/check-test-coverage.sh"
+
+[tasks.test]
+description = "Run Terraform tests"
+run         = "terraform test"
+
+[tasks."test:fast"]
+description = "Run fast plan-only tests"
+run         = "terraform test ./tests/module_validation.tftest.hcl ./tests/variable_combinations.tftest.hcl"

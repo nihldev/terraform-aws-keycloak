@@ -254,6 +254,11 @@ variable "db_backup_retention_period" {
   description = "Number of days to retain RDS backups"
   type        = number
   default     = 7
+
+  validation {
+    condition     = var.db_backup_retention_period >= 7
+    error_message = "Backup retention period must be at least 7 days to ensure adequate data protection and recovery capabilities."
+  }
 }
 
 variable "db_backup_window" {

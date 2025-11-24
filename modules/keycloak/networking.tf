@@ -237,4 +237,12 @@ resource "aws_lb_listener" "https" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.keycloak.arn
   }
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-https-${var.environment}"
+      Environment = var.environment
+    }
+  )
 }

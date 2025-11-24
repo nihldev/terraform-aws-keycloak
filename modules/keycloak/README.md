@@ -224,6 +224,102 @@ resource "aws_route53_record" "Keycloak" {
 }
 ```
 
+## Pre-Deployment Verification
+
+Before running `Terraform apply`, verify your infrastructure meets these requirements:
+
+### 1. Verify NAT Gateway Configuration
+
+**Check NAT Gateway exists:**
+
+```bash
+# List NAT Gateways in your VPC
+AWS ec2 describe-nat-gateways \
+  --filter "Name=vpc-id,Values=<YOUR_VPC_ID>" \
+  --query 'NatGateways[*].[NatGatewayId,State,SubnetId]' \
+  --output table
+
+# Expected: At least one NAT Gateway in "available" state
+```
+
+**Verify private subnet routes to NAT Gateway:**
+
+```bash
+# Check route tables for private subnets
+AWS ec2 describe-route-tables \
+  --filters "Name=vpc-id,Values=<YOUR_VPC_ID>" \
+  --query 'RouteTables[*].{RouteTableId:RouteTableId,Routes:Routes[?DestinationCidrBlock==`0.0.0.0/0`].{Dest:DestinationCidrBlock,Gateway:NatGatewayId}}' \
+  --output table
+
+# Expected: Private subnet route tables show 0.0.0.0/0 -> nat-xxxxx
+```
+
+**Why this is critical:**
+
+- ECS tasks must pull Keycloak container image from `quay.io`
+- Without NAT Gateway, tasks will fail with "CannotPullContainerError"
+- RDS cannot initialize without running Keycloak container
+
+### 2. Verify Subnet Configuration
+
+```bash
+# Check subnet availability zones
+AWS ec2 describe-subnets \
+  --subnet-ids subnet-xxxxx subnet-yyyyy \
+  --query 'Subnets[*].[SubnetId,AvailabilityZone,CidrBlock]' \
+  --output table
+
+# Expected: Subnets in different AZs (e.g., us-east-1a, us-east-1b)
+```
+
+### 3. Verify DNS Settings
+
+```bash
+# Check VPC DNS configuration
+AWS ec2 describe-vpc-attribute \
+  --vpc-id <YOUR_VPC_ID> \
+  --attribute enableDnsHostnames
+
+AWS ec2 describe-vpc-attribute \
+  --vpc-id <YOUR_VPC_ID> \
+  --attribute enableDnsSupport
+
+# Expected: Both should be "true"
+```
+
+### 4. Calculate Database Connection Pool
+
+Verify your configuration won't exceed RDS connection limits:
+
+```bash
+# Calculate: desired_count × db_pool_max_size × autoscaling_factor
+# Example: 2 tasks × 20 pool × 3 (autoscaling) = 120 connections
+
+# Check your planned configuration:
+# - desired_count: 2 (default)
+# - db_pool_max_size: 20 (default)
+# - autoscaling_max_capacity: 6 (desired_count * 3)
+# Total max connections: 6 × 20 = 120 connections
+
+# Compare against RDS instance class limits:
+# - db.t4g.micro: ~85 connections (would need adjustment!)
+# - db.t4g.small: ~410 connections (safe)
+```
+
+**Action if exceeding limits:**
+
+- Reduce `db_pool_max_size` to 10-15 for db.t4g.micro
+- OR use larger RDS instance class
+
+### 5. For Production: Create WAF WebACL
+
+If `environment = "prod"`, you must create a WAF WebACL before deployment:
+
+```bash
+# The module will reject deployment without WAF for production
+# See "Security Configuration" section for WAF setup instructions
+```
+
 ## Accessing Keycloak
 
 After deployment:
@@ -244,6 +340,278 @@ After deployment:
    ```
 
 3. Access the admin console at `https://your-domain/admin` or `http://alb-dns/admin`
+
+## Post-Deployment Verification
+
+After running `Terraform apply`, verify your deployment is healthy:
+
+### 1. Check Terraform Outputs
+
+```bash
+# Verify all outputs are populated
+Terraform output
+
+# Expected outputs:
+# - keycloak_url (ALB DNS or custom domain)
+# - alb_dns_name
+# - ecs_cluster_name
+# - ecs_service_name
+# - db_instance_endpoint
+```
+
+### 2. Verify ECS Service Status
+
+**Check ECS service is running:**
+
+```bash
+# Get cluster and service names from Terraform outputs
+CLUSTER_NAME=$(Terraform output -raw ecs_cluster_name)
+SERVICE_NAME=$(Terraform output -raw ecs_service_name)
+
+# Check service status
+AWS ECS describe-services \
+  --cluster "$CLUSTER_NAME" \
+  --services "$SERVICE_NAME" \
+  --query 'services[0].{desired:desiredCount,running:runningCount,pending:pendingCount,status:status}' \
+  --output table
+
+# Expected: running == desired (e.g., 2 == 2)
+# Status should be "ACTIVE"
+```
+
+**Check recent deployment events:**
+
+```bash
+# View last 5 service events
+AWS ECS describe-services \
+  --cluster "$CLUSTER_NAME" \
+  --services "$SERVICE_NAME" \
+  --query 'services[0].events[:5].[createdAt,message]' \
+  --output table
+
+# Look for: "has reached a steady state" (success indicator)
+# Avoid: "failed health checks" or "unable to pull image"
+```
+
+### 3. Verify Target Health
+
+**Check ALB target group health:**
+
+```bash
+# Get target group ARN from Terraform outputs
+TARGET_GROUP_ARN=$(Terraform output -raw target_group_arn)
+
+# Check target health
+AWS elbv2 describe-target-health \
+  --target-group-arn "$TARGET_GROUP_ARN" \
+  --query 'TargetHealthDescriptions[*].{Target:Target.Id,Port:Target.Port,Health:TargetHealth.State,Reason:TargetHealth.Reason}' \
+  --output table
+
+# Expected: All targets show "healthy" state
+# If "unhealthy": Check Reason field (e.g., "Target.FailedHealthChecks")
+```
+
+**Common health check issues:**
+
+| State     | Reason                            | Solution                                                |
+| --------- | --------------------------------- | ------------------------------------------------------- |
+| initial   | Target.FailedHealthChecks         | Wait 2-3 minutes for Keycloak startup                   |
+| unhealthy | Target.ResponseCodeMismatch       | Check CloudWatch logs for errors                        |
+| unhealthy | Target.Timeout                    | Increase health check timeout or check DB connectivity  |
+| draining  | Target.DeregistrationInProgress   | Normal during deployment updates                        |
+
+### 4. Monitor CloudWatch Logs
+
+**Tail ECS logs in real-time:**
+
+```bash
+# Get log group name from Terraform outputs
+LOG_GROUP=$(Terraform output -raw cloudwatch_log_group_name)
+
+# Tail logs (requires AWS CLI v2)
+AWS logs tail "$LOG_GROUP" --follow --format short
+
+# Look for successful startup messages:
+# - "Keycloak 26.0 (powered by Quarkus)"
+# - "Listening on: http://0.0.0.0:8080"
+# - "Profile prod activated"
+```
+
+**Check for errors:**
+
+```bash
+# Search for ERROR level logs in last 30 minutes
+AWS logs filter-log-events \
+  --log-group-name "$LOG_GROUP" \
+  --filter-pattern "ERROR" \
+  --start-time $(($(date +%s) - 1800))000 \
+  --query 'events[*].message' \
+  --output text
+
+# Expected: No output (no errors)
+# If errors found: Review error messages for database, configuration issues
+```
+
+### 5. Verify Database Connectivity
+
+**Check RDS instance is available:**
+
+```bash
+# Get DB instance ID from Terraform outputs
+DB_INSTANCE=$(Terraform output -raw db_instance_id)
+
+# Check RDS status
+AWS RDS describe-db-instances \
+  --db-instance-identifier "$DB_INSTANCE" \
+  --query 'DBInstances[0].{Status:DBInstanceStatus,Endpoint:Endpoint.Address,Engine:Engine,Version:EngineVersion}' \
+  --output table
+
+# Expected: Status = "available"
+```
+
+**Test database connections from ECS:**
+
+```bash
+# Check RDS connection count metric
+AWS cloudwatch get-metric-statistics \
+  --namespace AWS/RDS \
+  --metric-name DatabaseConnections \
+  --dimensions Name=DBInstanceIdentifier,Value="$DB_INSTANCE" \
+  --start-time $(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%S) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+  --period 300 \
+  --statistics Average \
+  --query 'Datapoints[0].Average'
+
+# Expected: Number > 0 (indicates active connections)
+# Typical: 10-30 connections for 2 tasks
+```
+
+### 6. Test Keycloak Access
+
+**Test HTTP/HTTPS access:**
+
+```bash
+# Get Keycloak URL
+KEYCLOAK_URL=$(Terraform output -raw keycloak_url)
+
+# Test health endpoint
+curl -i "$KEYCLOAK_URL/health/ready"
+
+# Expected: HTTP/1.1 200 OK
+# Response body: {"status":"UP","checks":[...]}
+```
+
+**Test admin console access:**
+
+```bash
+# Test admin console page loads
+curl -I "$KEYCLOAK_URL/admin/"
+
+# Expected: HTTP/1.1 200 OK or 302 Found (redirect to login)
+```
+
+**Retrieve and test admin credentials:**
+
+```bash
+# Get admin credentials
+ADMIN_SECRET=$(Terraform output -raw admin_credentials_secret_id)
+ADMIN_CREDS=$(AWS secretsmanager get-secret-value \
+  --secret-id "$ADMIN_SECRET" \
+  --query SecretString \
+  --output text)
+
+echo "$ADMIN_CREDS" | jq -r '"Username: \(.username)\nPassword: \(.password)"'
+
+# Test login via browser or API
+# Browser: Open $KEYCLOAK_URL/admin and use credentials
+```
+
+### 7. Verify Monitoring and Alarms
+
+**Check CloudWatch alarms are created:**
+
+```bash
+# List alarms for your deployment
+AWS cloudwatch describe-alarms \
+  --alarm-name-prefix "$(Terraform output -raw ecs_cluster_name | cut -d'-' -f1)" \
+  --query 'MetricAlarms[*].{Name:AlarmName,State:StateValue}' \
+  --output table
+
+# Expected: 5 alarms in "OK" state:
+# - high-cpu (ECS)
+# - high-memory (ECS)
+# - unhealthy-targets (ALB)
+# - RDS-high-cpu (RDS)
+# - RDS-low-storage (RDS)
+```
+
+### 8. Deployment Timeline
+
+**Expected deployment duration:**
+
+| Phase                  | Duration        | How to Monitor                         |
+| ---------------------- | --------------- | -------------------------------------- |
+| Terraform apply        | 15-20 min       | Watch Terraform output                 |
+| RDS creation           | 10-12 min       | `AWS RDS describe-db-instances`        |
+| ECS service creation   | 2-3 min         | `AWS ECS describe-services`            |
+| Container image pull   | 1-2 min         | CloudWatch logs: "Pulling from quay.io"|
+| Keycloak startup       | 2-3 min         | CloudWatch logs: "Keycloak started"    |
+| Health check pass      | 1-2 min         | `AWS elbv2 describe-target-health`     |
+| **Total**              | **15-25 min**   | All targets healthy                    |
+
+**If deployment exceeds 25 minutes:**
+
+- Check CloudWatch logs for errors
+- Verify NAT Gateway configuration
+- Check ECS service events for failures
+
+### 9. Troubleshooting Failed Deployments
+
+**ECS Tasks Not Starting:**
+
+```bash
+# Check task failure reasons
+AWS ECS list-tasks --cluster "$CLUSTER_NAME" --desired-status STOPPED --max-items 5
+
+# Get task failure details
+AWS ECS describe-tasks \
+  --cluster "$CLUSTER_NAME" \
+  --tasks <TASK_ARN> \
+  --query 'tasks[0].{StopCode:stopCode,StopReason:stoppedReason,Containers:containers[0].reason}'
+
+# Common reasons:
+# - "CannotPullContainerError" → Check NAT Gateway
+# - "ResourceInitializationError" → Check IAM permissions
+# - "OutOfMemoryError" → Increase task_memory
+```
+
+**Unhealthy Targets:**
+
+```bash
+# Get detailed health check failures
+AWS elbv2 describe-target-health \
+  --target-group-arn "$TARGET_GROUP_ARN" \
+  --query 'TargetHealthDescriptions[?TargetHealth.State==`unhealthy`]'
+
+# Check if it's just startup delay (first 10 minutes)
+# If persistent: Check CloudWatch logs for Keycloak errors
+```
+
+**Database Connection Errors:**
+
+```bash
+# Check for connection errors in logs
+AWS logs filter-log-events \
+  --log-group-name "$LOG_GROUP" \
+  --filter-pattern "\"connection\" \"database\" \"ERROR\"" \
+  --query 'events[*].message'
+
+# Common causes:
+# - RDS security group not allowing ECS tasks
+# - Database credentials incorrect (check Secrets Manager)
+# - RDS not yet available (check status)
+```
 
 ## Inputs
 
