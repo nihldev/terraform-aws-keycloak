@@ -99,7 +99,9 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_targets" {
 
 # RDS high CPU alarm
 resource "aws_cloudwatch_metric_alarm" "rds_high_cpu" {
-  alarm_name          = "${var.name}-keycloak-rds-${var.environment}-high-cpu"
+  count = var.database_type == "rds" ? 1 : 0
+
+  alarm_name          = "${var.name}-keycloak-db-${var.environment}-high-cpu"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
   metric_name         = "CPUUtilization"
@@ -110,13 +112,13 @@ resource "aws_cloudwatch_metric_alarm" "rds_high_cpu" {
   alarm_description   = "Keycloak RDS CPU utilization is above 80%"
 
   dimensions = {
-    DBInstanceIdentifier = aws_db_instance.keycloak.id
+    DBInstanceIdentifier = aws_db_instance.keycloak[0].id
   }
 
   tags = merge(
     var.tags,
     {
-      Name        = "${var.name}-keycloak-rds-${var.environment}-high-cpu"
+      Name        = "${var.name}-keycloak-db-${var.environment}-high-cpu"
       Environment = var.environment
     }
   )
@@ -124,7 +126,9 @@ resource "aws_cloudwatch_metric_alarm" "rds_high_cpu" {
 
 # RDS low storage space alarm
 resource "aws_cloudwatch_metric_alarm" "rds_low_storage" {
-  alarm_name          = "${var.name}-keycloak-rds-${var.environment}-low-storage"
+  count = var.database_type == "rds" ? 1 : 0
+
+  alarm_name          = "${var.name}-keycloak-db-${var.environment}-low-storage"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
   metric_name         = "FreeStorageSpace"
@@ -135,13 +139,40 @@ resource "aws_cloudwatch_metric_alarm" "rds_low_storage" {
   alarm_description   = "Keycloak RDS free storage space is below 5 GB"
 
   dimensions = {
-    DBInstanceIdentifier = aws_db_instance.keycloak.id
+    DBInstanceIdentifier = aws_db_instance.keycloak[0].id
   }
 
   tags = merge(
     var.tags,
     {
-      Name        = "${var.name}-keycloak-rds-${var.environment}-low-storage"
+      Name        = "${var.name}-keycloak-db-${var.environment}-low-storage"
+      Environment = var.environment
+    }
+  )
+}
+
+# Aurora high CPU alarm
+resource "aws_cloudwatch_metric_alarm" "aurora_high_cpu" {
+  count = contains(["aurora", "aurora-serverless"], var.database_type) ? 1 : 0
+
+  alarm_name          = "${var.name}-keycloak-aurora-${var.environment}-high-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "Keycloak Aurora cluster CPU utilization is above 80%"
+
+  dimensions = {
+    DBClusterIdentifier = aws_rds_cluster.keycloak[0].id
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-aurora-${var.environment}-high-cpu"
       Environment = var.environment
     }
   )

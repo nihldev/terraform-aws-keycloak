@@ -52,32 +52,47 @@ output "ecs_task_definition_arn" {
 }
 
 #######################
-# RDS Outputs
+# Database Outputs
 #######################
 
+output "database_type" {
+  description = "Type of database deployed (rds, aurora, or aurora-serverless)"
+  value       = var.database_type
+}
+
 output "db_instance_id" {
-  description = "ID of the RDS instance"
-  value       = aws_db_instance.keycloak.id
+  description = "ID of the database instance or cluster"
+  value       = var.database_type == "rds" ? aws_db_instance.keycloak[0].id : aws_rds_cluster.keycloak[0].id
 }
 
 output "db_instance_address" {
-  description = "Address of the RDS instance"
-  value       = aws_db_instance.keycloak.address
+  description = "Address of the database endpoint"
+  value       = var.database_type == "rds" ? aws_db_instance.keycloak[0].address : aws_rds_cluster.keycloak[0].endpoint
 }
 
 output "db_instance_endpoint" {
-  description = "Connection endpoint for the RDS instance"
-  value       = aws_db_instance.keycloak.endpoint
+  description = "Connection endpoint for the database"
+  value       = var.database_type == "rds" ? aws_db_instance.keycloak[0].endpoint : "${aws_rds_cluster.keycloak[0].endpoint}:${aws_rds_cluster.keycloak[0].port}"
 }
 
 output "db_instance_arn" {
-  description = "ARN of the RDS instance"
-  value       = aws_db_instance.keycloak.arn
+  description = "ARN of the database instance or cluster"
+  value       = var.database_type == "rds" ? aws_db_instance.keycloak[0].arn : aws_rds_cluster.keycloak[0].arn
 }
 
 output "db_name" {
   description = "Name of the database"
-  value       = aws_db_instance.keycloak.db_name
+  value       = "keycloak"
+}
+
+output "db_reader_endpoint" {
+  description = "Reader endpoint for Aurora cluster (empty for RDS)"
+  value       = var.database_type != "rds" ? aws_rds_cluster.keycloak[0].reader_endpoint : ""
+}
+
+output "cost_warning" {
+  description = "Cost optimization recommendations"
+  value       = local.cost_warning
 }
 
 #######################

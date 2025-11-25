@@ -1,23 +1,28 @@
 # Keycloak Terraform Module
 
-This module deploys Keycloak on AWS using ECS Fargate, RDS PostgreSQL, and Application Load Balancer.
+This module deploys Keycloak on AWS using ECS Fargate with flexible database options (RDS PostgreSQL, Aurora Provisioned, or Aurora Serverless v2) and Application Load Balancer.
 
 ## Features
 
 - **ECS Fargate**: Serverless container deployment with auto-scaling
-- **RDS PostgreSQL**: Managed database with automated backups
+- **Flexible Database Options**: Choose the right database for your needs
+  - **RDS PostgreSQL**: Cost-effective, reliable (default)
+  - **Aurora Provisioned**: Enhanced HA, up to 15 read replicas, faster failover
+  - **Aurora Serverless v2**: Auto-scaling capacity, ideal for variable workloads
 - **High Availability**: Optional multi-AZ deployment
 - **Security**:
   - Secrets stored in AWS Secrets Manager
   - Security groups with least-privilege access
-  - Encrypted RDS storage
+  - Encrypted database storage
   - HTTPS support with ACM certificates
 - **Monitoring**:
   - CloudWatch logs and metrics
   - Pre-configured alarms for CPU, memory, and health
   - Container Insights support
+  - Performance Insights enabled by default
 - **Auto-scaling**: Automatic scaling based on CPU and memory utilization
 - **Production-ready**: Circuit breaker, health checks, and deployment safeguards
+- **Aurora Features**: Backtrack (time-travel), read replicas, extended Performance Insights
 
 ## Requirements
 
@@ -86,8 +91,116 @@ VPC: 10.0.0.0/16
 ## Architecture
 
 ```text
-Internet → ALB (Public Subnets) → ECS Fargate (Private Subnets) → RDS PostgreSQL (Private Subnets)
+Internet → ALB (Public Subnets) → ECS Fargate (Private Subnets) → Database (Private Subnets)
+                                                                     (RDS / Aurora / Aurora Serverless)
 ```
+
+## Database Options
+
+This module supports three database types to match your workload requirements and budget:
+
+### RDS PostgreSQL (Default)
+
+**Best for:** Cost-conscious deployments, predictable workloads, most use cases
+
+```hcl
+database_type = "RDS"  # Default
+```
+
+**Characteristics:**
+
+- ✅ Most cost-effective (~$15-30/month for dev, ~$100-300/month for prod)
+- ✅ Proven reliability and performance
+- ✅ Up to 5 read replicas
+- ✅ Multi-AZ with ~60-120 second failover
+- ✅ Storage auto-scaling up to 64 TB
+
+**When to use:**
+
+- Standard production workloads
+- Budget-conscious deployments
+- Predictable authentication patterns
+
+---
+
+### Aurora Provisioned
+
+**Best for:** High-availability requirements, read-heavy workloads, faster failover
+
+```hcl
+database_type = "aurora"
+```
+
+**Characteristics:**
+
+- ✅ Enhanced high availability (~30 second failover)
+- ✅ Up to 15 read replicas (vs RDS's 5)
+- ✅ Backtrack feature (rewind to point in time without restore)
+- ✅ Better read scaling for heavy authentication loads
+- ✅ Storage auto-scales to 128 TB
+- 💰 ~2x cost of RDS (~$30-60/month for dev, ~$300-600/month for prod)
+
+**When to use:**
+
+- Mission-critical production deployments
+- Need for faster failover (<30 seconds)
+- Read-heavy workloads requiring multiple replicas
+- Compliance requirements for point-in-time recovery
+
+**Aurora-specific features:**
+
+- **Backtrack**: Rewind database to any point in last 72 hours without restore
+- **Read replicas**: Automatic replica count based on `multi_az` or explicit control
+- **Performance Insights**: Extended retention (31 days default for prod)
+
+---
+
+### Aurora Serverless v2
+
+**Best for:** Variable workloads, dev/test environments, unpredictable traffic
+
+```hcl
+database_type = "aurora-serverless"
+db_capacity_min = 0.5  # Minimum ACUs
+db_capacity_max = 4    # Maximum ACUs
+```
+
+**Characteristics:**
+
+- ✅ Auto-scales capacity based on load (0.5 to 128 ACUs)
+- ✅ Scales to near-zero when idle (huge cost savings for dev/test)
+- ✅ Instant scaling during authentication spikes
+- ✅ Pay only for capacity used
+- 💰 Cost-effective for variable workloads, expensive if always at max capacity
+
+**When to use:**
+
+- Development and test environments (scales to near-zero when idle)
+- Unpredictable authentication patterns
+- Seasonal workloads with high variability
+- Getting started (can scale up as needed)
+
+**Capacity units (ACUs):**
+
+- 1 ACU ≈ 2GB RAM
+- 0.5 ACU: Minimal dev/test (~$40/month at 50% utilization)
+- 2 ACU: Light production (~$160/month at 50% utilization)
+- 8 ACU: Medium production (~$640/month at 50% utilization)
+
+---
+
+### Database Comparison
+
+| Feature | RDS | Aurora Provisioned | Aurora Serverless v2 |
+| ------- | --- | ------------------ | -------------------- |
+| **Cost (dev)** | ~$15-30/month | ~$30-60/month | ~$20-80/month (varies) |
+| **Cost (prod)** | ~$100-300/month | ~$300-600/month | ~$100-800/month (varies) |
+| **Failover time** | 60-120 seconds | ~30 seconds | ~30 seconds |
+| **Read replicas** | Up to 5 | Up to 15 | N/A (single endpoint) |
+| **Max storage** | 64 TB | 128 TB | 128 TB |
+| **Backtrack** | ❌ | ✅ 0-72 hours | ❌ |
+| **Auto-scaling** | Storage only | Storage only | Compute + Storage |
+| **Best for** | Most use cases | HA requirements | Variable workloads |
 
 ## Usage
 
@@ -151,6 +264,134 @@ module "Keycloak" {
   tags = {
     Project     = "MyApp"
     Team        = "Platform"
+    Environment = "Production"
+  }
+}
+```
+
+### Aurora Provisioned Example (High Availability)
+
+```hcl
+module "Keycloak" {
+  source = "./modules/Keycloak"
+
+  name        = "myapp"
+  environment = "prod"
+
+  # Networking
+  vpc_id             = "vpc-xxxxx"
+  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy", "subnet-zzzzz"]
+  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb", "subnet-ccccc"]
+
+  # Aurora Provisioned for enhanced HA
+  database_type     = "aurora"
+  db_instance_class = "db.r6g.large"
+
+  # High availability with read replicas
+  multi_az = true  # Automatically creates 1 read replica
+  # OR explicitly set: aurora_replica_count = 2  # For 2 read replicas
+
+  # Aurora-specific features
+  aurora_backtrack_window = 24  # 24 hours of backtrack (auto-enabled for prod)
+
+  # HTTPS with custom domain
+  certificate_arn   = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+  keycloak_hostname = "auth.example.com"
+
+  # ECS scaling
+  desired_count = 3
+  task_cpu      = 2048
+  task_memory   = 4096
+
+  # Backup configuration
+  db_backup_retention_period = 30
+  db_deletion_protection     = true
+
+  tags = {
+    Project     = "MyApp"
+    Team        = "Platform"
+    Environment = "Production"
+  }
+}
+
+# Access Aurora reader endpoint for read-only queries
+output "aurora_reader_endpoint" {
+  value = module.Keycloak.db_reader_endpoint
+}
+```
+
+### Aurora Serverless v2 Example (Variable Workload)
+
+```hcl
+module "Keycloak" {
+  source = "./modules/Keycloak"
+
+  name        = "myapp"
+  environment = "dev"
+
+  # Networking
+  vpc_id             = "vpc-xxxxx"
+  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy"]
+  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb"]
+
+  # Aurora Serverless v2 for auto-scaling
+  database_type   = "aurora-serverless"
+  db_capacity_min = 0.5  # Scales down to 0.5 ACU when idle
+  db_capacity_max = 4    # Scales up to 4 ACU during peak load
+
+  # Dev configuration
+  multi_az      = false
+  desired_count = 1
+  task_cpu      = 512
+  task_memory   = 1024
+
+  tags = {
+    Project     = "MyApp"
+    Environment = "Development"
+  }
+}
+
+# Check for cost warnings
+output "cost_warning" {
+  value = module.Keycloak.cost_warning
+}
+```
+
+### Aurora Serverless v2 Example (Production with Auto-Scaling)
+
+```hcl
+module "Keycloak" {
+  source = "./modules/Keycloak"
+
+  name        = "myapp"
+  environment = "prod"
+
+  # Networking
+  vpc_id             = "vpc-xxxxx"
+  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy", "subnet-zzzzz"]
+  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb", "subnet-ccccc"]
+
+  # Aurora Serverless v2 for unpredictable workload
+  database_type   = "aurora-serverless"
+  db_capacity_min = 2   # Minimum 2 ACU (baseline)
+  db_capacity_max = 16  # Scale up to 16 ACU during authentication spikes
+
+  # HTTPS
+  certificate_arn   = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+  keycloak_hostname = "auth.example.com"
+
+  # Production ECS
+  multi_az      = true
+  desired_count = 3
+  task_cpu      = 2048
+  task_memory   = 4096
+
+  # Backup configuration
+  db_backup_retention_period = 30
+  db_deletion_protection     = true
+
+  tags = {
+    Project     = "MyApp"
     Environment = "Production"
   }
 }
@@ -655,21 +896,26 @@ AWS logs filter-log-events \
 | enable_container_insights | Enable CloudWatch Container Insights | bool | true |
 | health_check_grace_period_seconds | ECS health check grace period | number | 600 |
 
-### RDS Configuration
+### Database Configuration
 
 | Name | Description | Type | Default |
 | ---- | ----------- | ---- | ------- |
-| db_instance_class | RDS instance class | string | "db.t4g.micro" |
-| db_allocated_storage | Storage in GB | number | 20 |
-| db_max_allocated_storage | Max storage for autoscaling | number | 100 |
+| database_type | Database type: `RDS`, `aurora`, or `aurora-serverless` | string | "RDS" |
+| db_instance_class | Instance class for RDS/Aurora (ignored for aurora-serverless) | string | "db.t4g.micro" |
+| db_capacity_min | Aurora Serverless v2 minimum ACUs (0.5-128) | number | 0.5 |
+| db_capacity_max | Aurora Serverless v2 maximum ACUs (0.5-128) | number | 2 |
+| aurora_replica_count | Number of Aurora read replicas (0-15, null=auto based on multi_az) | number | null |
+| aurora_backtrack_window | Aurora backtrack hours (0-72, null=24 for prod, 0 for non-prod) | number | null |
+| db_allocated_storage | Storage in GB (RDS only) | number | 20 |
+| db_max_allocated_storage | Max storage for autoscaling (RDS only) | number | 100 |
 | db_engine_version | PostgreSQL version | string | "16.3" |
 | db_backup_retention_period | Backup retention days | number | 7 |
 | db_backup_window | Backup window | string | "03:00-04:00" |
 | db_maintenance_window | Maintenance window | string | "sun:04:00-sun:05:00" |
 | db_deletion_protection | Enable deletion protection | bool | true |
 | db_skip_final_snapshot | Skip final snapshot on destroy | bool | false |
-| db_kms_key_id | KMS key for RDS encryption | string | "" (AWS managed) |
-| db_performance_insights_retention_period | Performance Insights retention | number | 7 |
+| db_kms_key_id | KMS key for database encryption | string | "" (AWS managed) |
+| db_performance_insights_retention_period | Performance Insights retention (null=31 for Aurora prod, 7 otherwise) | number | null |
 | db_iam_database_authentication_enabled | Enable IAM auth | bool | false |
 
 ### Keycloak Configuration
@@ -712,16 +958,23 @@ AWS logs filter-log-events \
 | Keycloak_admin_console_url | URL to access admin console |
 | alb_dns_name | DNS name of the ALB |
 | alb_zone_id | Zone ID for Route53 alias records |
+| database_type | Type of database deployed (RDS, aurora, or aurora-serverless) |
+| db_instance_id | ID of the database instance or cluster |
+| db_instance_address | Address of the database endpoint |
+| db_instance_endpoint | Connection endpoint for the database |
+| db_reader_endpoint | Reader endpoint for Aurora cluster (empty for RDS) |
 | db_credentials_secret_arn | ARN of database credentials secret |
 | admin_credentials_secret_arn | ARN of admin credentials secret |
 | ECS_cluster_name | Name of the ECS cluster |
 | cloudwatch_log_group_name | Name of the CloudWatch log group |
+| cost_warning | Cost optimization recommendations |
 
 ## Cost Optimization
 
-### Development/Testing
+### Development/Testing (RDS - Most Cost-Effective)
 
 ```hcl
+database_type              = "RDS"  # Default, most cost-effective
 multi_az                   = false
 desired_count              = 1
 task_cpu                   = 512
@@ -732,9 +985,29 @@ db_backup_retention_period = 1
 
 Estimated cost: ~$50-80/month
 
-### Production
+---
+
+### Development/Testing (Aurora Serverless - Auto-Scaling)
 
 ```hcl
+database_type              = "aurora-serverless"
+db_capacity_min            = 0.5  # Scales to near-zero when idle
+db_capacity_max            = 2
+multi_az                   = false
+desired_count              = 1
+task_cpu                   = 512
+task_memory                = 1024
+db_backup_retention_period = 1
+```
+
+Estimated cost: ~$40-100/month (depends on usage pattern, scales to near-zero when idle)
+
+---
+
+### Production (RDS - Balanced)
+
+```hcl
+database_type              = "RDS"
 multi_az                   = true
 desired_count              = 3
 task_cpu                   = 1024
@@ -743,7 +1016,53 @@ db_instance_class          = "db.r6g.large"
 db_backup_retention_period = 30
 ```
 
-Estimated cost: ~$300-500/month (varies by region and usage)
+Estimated cost: ~$300-500/month
+
+---
+
+### Production (Aurora Provisioned - High Availability)
+
+```hcl
+database_type              = "aurora"
+multi_az                   = true  # Creates 1 read replica automatically
+desired_count              = 3
+task_cpu                   = 1024
+task_memory                = 2048
+db_instance_class          = "db.r6g.large"
+aurora_backtrack_window    = 24  # Time-travel feature
+db_backup_retention_period = 30
+```
+
+Estimated cost: ~$600-900/month (includes writer + 1 reader)
+
+---
+
+### Production (Aurora Serverless - Variable Workload)
+
+```hcl
+database_type              = "aurora-serverless"
+db_capacity_min            = 2   # Baseline capacity
+db_capacity_max            = 16  # Scale during spikes
+multi_az                   = true
+desired_count              = 3
+task_cpu                   = 1024
+task_memory                = 2048
+db_backup_retention_period = 30
+```
+
+Estimated cost: ~$200-800/month (depends on load patterns)
+
+---
+
+### Cost Comparison Summary
+
+| Configuration | Database Type | Monthly Cost | Best For |
+| ------------- | ------------- | ------------ | -------- |
+| **Dev (Minimal)** | RDS | ~$50-80 | Consistent low usage |
+| **Dev (Scaling)** | Aurora Serverless | ~$40-100 | Variable/idle periods |
+| **Prod (Standard)** | RDS | ~$300-500 | Most production use cases |
+| **Prod (HA)** | Aurora Provisioned | ~$600-900 | Mission-critical, read-heavy |
+| **Prod (Variable)** | Aurora Serverless | ~$200-800 | Unpredictable patterns |
 
 ## Security Considerations
 

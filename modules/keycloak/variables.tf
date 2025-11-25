@@ -223,13 +223,122 @@ variable "autoscaling_max_capacity" {
 }
 
 #######################
-# RDS Configuration
+# Database Configuration
 #######################
 
+variable "database_type" {
+  description = <<-EOT
+    Database type: rds, aurora, or aurora-serverless.
+
+    - rds: Standard RDS PostgreSQL (cost-effective, good for most workloads)
+    - aurora: Aurora Provisioned (better HA, up to 15 read replicas, faster failover)
+    - aurora-serverless: Aurora Serverless v2 (auto-scaling, ideal for variable workloads)
+  EOT
+  type        = string
+  default     = "rds"
+
+  validation {
+    condition     = contains(["rds", "aurora", "aurora-serverless"], var.database_type)
+    error_message = "Database type must be one of: rds, aurora, aurora-serverless"
+  }
+}
+
 variable "db_instance_class" {
-  description = "RDS instance class"
+  description = <<-EOT
+    Database instance class for RDS and Aurora Provisioned.
+    Examples: db.t4g.micro, db.t4g.small, db.r6g.large
+
+    Ignored when database_type = "aurora-serverless" (use db_capacity_min/max instead).
+  EOT
   type        = string
   default     = "db.t4g.micro"
+}
+
+variable "db_capacity_min" {
+  description = <<-EOT
+    Minimum capacity for Aurora Serverless v2 in ACUs (Aurora Capacity Units).
+    Only used when database_type = "aurora-serverless".
+    Range: 0.5 to 128 ACUs (1 ACU ≈ 2GB RAM)
+
+    Examples:
+    - 0.5: Minimal cost for dev/test
+    - 2: Light production workload
+    - 8: Medium production workload
+  EOT
+  type        = number
+  default     = 0.5
+
+  validation {
+    condition     = var.db_capacity_min >= 0.5 && var.db_capacity_min <= 128
+    error_message = "Aurora Serverless min capacity must be between 0.5 and 128 ACUs"
+  }
+}
+
+variable "db_capacity_max" {
+  description = <<-EOT
+    Maximum capacity for Aurora Serverless v2 in ACUs.
+    Only used when database_type = "aurora-serverless".
+    Must be >= db_capacity_min.
+  EOT
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.db_capacity_max >= 0.5 && var.db_capacity_max <= 128
+    error_message = "Aurora Serverless max capacity must be between 0.5 and 128 ACUs"
+  }
+
+  validation {
+    condition     = var.db_capacity_max >= var.db_capacity_min
+    error_message = "Aurora Serverless max capacity must be >= min capacity"
+  }
+}
+
+variable "aurora_replica_count" {
+  description = <<-EOT
+    Number of Aurora read replicas (0-15).
+    Only applies when database_type = "aurora".
+
+    If null (default), automatically creates:
+    - 1 replica when multi_az = true
+    - 0 replicas when multi_az = false
+
+    Set explicitly to override automatic behavior.
+  EOT
+  type        = number
+  default     = null
+
+  validation {
+    condition = (
+      var.aurora_replica_count == null ||
+      (var.aurora_replica_count >= 0 && var.aurora_replica_count <= 15)
+    )
+    error_message = "Aurora replica count must be null or between 0 and 15"
+  }
+}
+
+variable "aurora_backtrack_window" {
+  description = <<-EOT
+    Hours to retain backtrack data for Aurora Provisioned (0-72).
+    Allows rewinding database to any point in time without restore from backup.
+    Only applies when database_type = "aurora".
+
+    If null (default), automatically sets:
+    - 24 hours for prod environment
+    - 0 hours (disabled) for non-prod
+
+    Cost: ~$0.012 per million change records/month (typically minimal)
+  EOT
+  type        = number
+  default     = null
+
+  validation {
+    condition = (
+      var.aurora_backtrack_window == null ||
+      (var.aurora_backtrack_window >= 0 && var.aurora_backtrack_window <= 72)
+    )
+    error_message = "Aurora backtrack window must be null or between 0 and 72 hours"
+  }
 }
 
 variable "db_allocated_storage" {
@@ -292,9 +401,29 @@ variable "db_kms_key_id" {
 }
 
 variable "db_performance_insights_retention_period" {
-  description = "Performance Insights retention period in days (7-731)"
+  description = <<-EOT
+    Performance Insights retention period in days.
+
+    If null (default), automatically sets:
+    - 31 days for Aurora in prod environment
+    - 7 days for RDS or non-prod
+
+    Valid values: 7, 31, 62, 93, 124, 155, 186, 217, 248, 279, 310, 341, 372,
+    403, 434, 465, 496, 527, 558, 589, 620, 651, 682, 713, 731
+  EOT
   type        = number
-  default     = 7
+  default     = null
+
+  validation {
+    condition = (
+      var.db_performance_insights_retention_period == null ||
+      contains([
+        7, 31, 62, 93, 124, 155, 186, 217, 248, 279, 310, 341, 372, 403,
+        434, 465, 496, 527, 558, 589, 620, 651, 682, 713, 731
+      ], var.db_performance_insights_retention_period)
+    )
+    error_message = "Performance Insights retention must be null or one of the valid retention periods"
+  }
 }
 
 variable "db_iam_database_authentication_enabled" {

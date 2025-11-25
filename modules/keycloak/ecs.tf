@@ -24,8 +24,11 @@ resource "aws_ecs_cluster" "keycloak" {
 #######################
 
 locals {
-  # Construct database URL
-  db_url = "jdbc:postgresql://${aws_db_instance.keycloak.address}:${aws_db_instance.keycloak.port}/${aws_db_instance.keycloak.db_name}"
+  # Construct database URL (conditional for RDS vs Aurora)
+  db_endpoint = var.database_type == "rds" ? aws_db_instance.keycloak[0].address : aws_rds_cluster.keycloak[0].endpoint
+  db_port     = var.database_type == "rds" ? aws_db_instance.keycloak[0].port : aws_rds_cluster.keycloak[0].port
+  db_name     = "keycloak"
+  db_url      = "jdbc:postgresql://${local.db_endpoint}:${local.db_port}/${local.db_name}"
 
   # Base environment variables
   base_environment = [
@@ -39,7 +42,7 @@ locals {
     },
     {
       name  = "KC_DB_USERNAME"
-      value = aws_db_instance.keycloak.username
+      value = "keycloak"
     },
     {
       name  = "KC_DB_POOL_INITIAL_SIZE"
