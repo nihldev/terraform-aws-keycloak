@@ -23,6 +23,8 @@ This module deploys Keycloak on AWS using ECS Fargate with flexible database opt
 - **Auto-scaling**: Automatic scaling based on CPU and memory utilization
 - **Production-ready**: Circuit breaker, health checks, and deployment safeguards
 - **Aurora Features**: Backtrack (time-travel), read replicas, extended Performance Insights
+- **Email Integration (Optional)**: Amazon SES for password resets, email verification, notifications
+- **Custom Images (Optional)**: ECR repository support for custom themes, providers, and extensions
 
 ## Requirements
 
@@ -463,6 +465,498 @@ resource "aws_route53_record" "Keycloak" {
     evaluate_target_health = true
   }
 }
+```
+
+## Email Configuration (SES)
+
+This module optionally integrates with Amazon SES to enable Keycloak to send emails for:
+
+- Password reset emails
+- Email verification
+- Admin notifications
+- User account updates
+
+### Enabling SES Integration
+
+```hcl
+module "Keycloak" {
+  source = "path/to/modules/Keycloak"
+
+  # ... other configuration ...
+
+  # Enable SES email integration
+  enable_ses = true
+  ses_domain = "example.com"  # Your verified domain
+
+  # Optional: Automatic DNS record creation (if using Route53)
+  ses_route53_zone_id = "Z1234567890ABC"
+
+  # Optional: Custom from email address
+  ses_from_email = "keycloak@example.com"
+
+  # Optional: Enable email tracking metrics
+  ses_configuration_set_enabled = true
+}
+```
+
+### SES Sandbox Mode
+
+**Important**: New AWS accounts have SES in sandbox mode, which restricts sending:
+
+- Can only send to verified email addresses
+- Limited sending quota (200 emails/day)
+
+To send production emails, you must [request production access](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html).
+
+### DNS Verification
+
+If you don't provide `ses_route53_zone_id`, you must manually create DNS records:
+
+```bash
+# Get required DNS records after deployment
+Terraform output ses_dns_records_required
+```
+
+**Required records:**
+
+1. **TXT record** for domain verification: `_amazonses.example.com`
+2. **CNAME records** for DKIM (3 records): `{token}._domainkey.example.com`
+
+### Configuring Keycloak Realm
+
+After deployment, configure each Keycloak realm to use SES SMTP:
+
+1. **Get SMTP credentials**:
+
+   ```bash
+   # Get the SMTP secret
+   AWS secretsmanager get-secret-value \
+     --secret-id $(Terraform output -raw ses_smtp_credentials_secret_id) \
+     --query SecretString --output text | jq .
+   ```
+
+2. **Convert IAM secret to SMTP password**:
+
+   The IAM secret key must be converted to an SMTP password. Use this Python script:
+
+   ```python
+   #!/usr/bin/env python3
+   import hmac
+   import hashlib
+   import base64
+   import sys
+
+   SMTP_REGIONS = [
+       "us-east-2", "us-east-1", "us-west-2", "ap-south-1",
+       "ap-northeast-2", "ap-southeast-1", "ap-southeast-2",
+       "ap-northeast-1", "ca-central-1", "eu-central-1",
+       "eu-west-1", "eu-west-2", "eu-west-3", "eu-north-1",
+       "sa-east-1", "us-gov-west-1", "us-gov-east-1"
+   ]
+
+   def sign(key, msg):
+       return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
+
+   def calculate_key(secret_access_key, region):
+       if region not in SMTP_REGIONS:
+           raise ValueError(f"Region {region} not supported for SES SMTP")
+
+       signature = sign(("AWS4" + secret_access_key).encode("utf-8"), "11111111")
+       signature = sign(signature, region)
+       signature = sign(signature, "ses")
+       signature = sign(signature, "aws4_request")
+       signature = sign(signature, "SendRawEmail")
+       signature_and_version = bytes([0x04]) + signature
+       return base64.b64encode(signature_and_version).decode("utf-8")
+
+   if __name__ == "__main__":
+       if len(sys.argv) != 3:
+           print(f"Usage: {sys.argv[0]} <secret_access_key> <region>")
+           sys.exit(1)
+       print(calculate_key(sys.argv[1], sys.argv[2]))
+   ```
+
+   Run it:
+
+   ```bash
+   python3 smtp_password.py <iam_secret_key> <region>
+   ```
+
+3. **Configure SMTP in Keycloak**:
+
+   In the Keycloak Admin Console:
+   - Go to **Realm Settings** → **Email**
+   - Configure:
+     - **From**: `keycloak@example.com` (or your `ses_from_email`)
+     - **Host**: `email-smtp.{region}.amazonaws.com`
+     - **Port**: `587`
+     - **Enable StartTLS**: Yes
+     - **Enable Authentication**: Yes
+     - **Username**: The `smtp_username` from the secret
+     - **Password**: The converted SMTP password (from step 2)
+
+4. **Test email**:
+   - Click "Test Connection" in Keycloak
+   - Send a test email to verify configuration
+
+### SES Configuration Examples
+
+#### Development (Sandbox Testing)
+
+```hcl
+# For testing without domain verification
+enable_ses         = true
+ses_domain         = "example.com"
+ses_email_identity = "developer@example.com"  # Verify this specific email
+```
+
+#### Production with Route53
+
+```hcl
+enable_ses                    = true
+ses_domain                    = "mail.example.com"
+ses_from_email                = "noreply@mail.example.com"
+ses_route53_zone_id           = data.aws_route53_zone.main.zone_id
+ses_configuration_set_enabled = true  # Enable delivery tracking
+```
+
+#### Production with External DNS
+
+```hcl
+enable_ses     = true
+ses_domain     = "example.com"
+ses_from_email = "keycloak@example.com"
+# No ses_route53_zone_id - manually create DNS records from output
+```
+
+### Monitoring Email Delivery
+
+If `ses_configuration_set_enabled = true`, CloudWatch metrics are available:
+
+```bash
+# Check email delivery metrics
+AWS cloudwatch get-metric-statistics \
+  --namespace AWS/SES \
+  --metric-name Send \
+  --dimensions Name=ConfigurationSetName,Value=$(Terraform output -raw ses_configuration_set_name) \
+  --start-time $(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%S) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+  --period 3600 \
+  --statistics Sum
+```
+
+### SES Costs
+
+SES pricing is very affordable:
+
+- **Sending**: $0.10 per 1,000 emails
+- **Receiving**: $0.10 per 1,000 emails (first 1,000 free)
+- **Data transfer**: Standard AWS rates
+
+Typical Keycloak usage (password resets, verifications) costs < $1/month for most deployments.
+
+### Troubleshooting SES
+
+#### Emails not being sent
+
+1. **Check SES sandbox status**:
+
+   ```bash
+   AWS ses get-account-sending-enabled
+   ```
+
+2. **Verify domain is verified**:
+
+   ```bash
+   AWS ses get-identity-verification-attributes \
+     --identities $(Terraform output -raw ses_domain)
+   ```
+
+3. **Check sending quota**:
+
+   ```bash
+   AWS ses get-send-quota
+   ```
+
+#### Emails going to spam
+
+- Ensure DKIM records are properly configured
+- Check SPF record for your domain
+- Consider adding DMARC record
+- Monitor bounce and complaint rates
+
+#### Connection refused from Keycloak
+
+- Verify security groups allow outbound SMTP (port 587)
+- Check NAT Gateway is configured for private subnets
+- Verify SMTP credentials are correct
+
+## Custom Keycloak Images (ECR)
+
+This module supports deploying custom Keycloak Docker images for scenarios requiring:
+
+- Custom themes (branding, UI customization)
+- SPI providers (custom authenticators, social logins)
+- Custom extensions and JAR files
+- Security compliance (private registry requirement)
+
+### Option 1: Use Your Own Image
+
+If you already have a custom Keycloak image in any registry:
+
+```hcl
+module "Keycloak" {
+  source = "path/to/modules/Keycloak"
+
+  # Use custom image from any registry
+  keycloak_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/my-Keycloak:v1.0.0"
+
+  # Or from Docker Hub
+  # keycloak_image = "myorg/Keycloak-custom:latest"
+}
+```
+
+### Option 2: Module Creates ECR Repository
+
+Let the module create an ECR repository for you:
+
+```hcl
+module "Keycloak" {
+  source = "path/to/modules/Keycloak"
+
+  # Module creates ECR repository
+  create_ecr_repository = true
+
+  # Optional: Configure ECR settings
+  ecr_image_tag_mutability  = "IMMUTABLE"  # Recommended for production
+  ecr_scan_on_push          = true         # Vulnerability scanning
+  ecr_image_retention_count = 30           # Keep last 30 images
+}
+```
+
+After deployment, push your custom image:
+
+```bash
+# Get push commands from Terraform output
+Terraform output ecr_push_commands
+
+# Or manually:
+# 1. Authenticate
+AWS ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin $(Terraform output -raw ecr_repository_url)
+
+# 2. Build your image
+docker build -t $(Terraform output -raw ecr_repository_url):v1.0.0 .
+
+# 3. Push
+docker push $(Terraform output -raw ecr_repository_url):v1.0.0
+
+# 4. Update Terraform to use the new tag
+# keycloak_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/myapp-Keycloak-prod:v1.0.0"
+```
+
+### Building Custom Keycloak Images
+
+#### Example Dockerfile
+
+```dockerfile
+# Custom Keycloak with themes and providers
+FROM quay.io/Keycloak/Keycloak:26.0 as builder
+
+# Install custom theme
+COPY themes/my-theme /opt/Keycloak/themes/my-theme
+
+# Install custom providers (JARs)
+COPY providers/*.jar /opt/Keycloak/providers/
+
+# Build optimized Keycloak
+RUN /opt/Keycloak/bin/kc.sh build
+
+# Production image
+FROM quay.io/Keycloak/Keycloak:26.0
+COPY --from=builder /opt/Keycloak/ /opt/Keycloak/
+
+ENTRYPOINT ["/opt/Keycloak/bin/kc.sh"]
+```
+
+#### Example with Custom Theme Only
+
+```dockerfile
+FROM quay.io/Keycloak/Keycloak:26.0
+
+# Copy custom login theme
+COPY my-login-theme /opt/Keycloak/themes/my-login-theme
+
+# No build step needed for themes-only customization
+ENTRYPOINT ["/opt/Keycloak/bin/kc.sh"]
+```
+
+### CI/CD Integration
+
+#### GitHub Actions Example
+
+```yaml
+name: Build Keycloak Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Keycloak/**'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: myapp-Keycloak-prod
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: AWS-actions/configure-AWS-credentials@v4
+        with:
+          AWS-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: AWS-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ GitHub.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./Keycloak
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+          # Also tag as latest
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+```
+
+#### GitLab CI Example
+
+```yaml
+build-Keycloak:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - apk add --no-cache AWS-cli
+    - AWS ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+  script:
+    - docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$CI_COMMIT_SHA ./Keycloak
+    - docker push $ECR_REGISTRY/$ECR_REPOSITORY:$CI_COMMIT_SHA
+  only:
+    changes:
+      - Keycloak/**
+```
+
+### Updating to a New Image Version
+
+After pushing a new image:
+
+1. **Update Terraform variable**:
+
+   ```hcl
+   keycloak_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/myapp-Keycloak-prod:v1.1.0"
+   ```
+
+2. **Apply changes**:
+
+   ```bash
+   Terraform plan  # Review changes
+   Terraform apply # Deploy new image
+   ```
+
+3. **ECS performs rolling update**:
+   - New tasks start with new image
+   - Health checks verify new tasks
+   - Old tasks drain and terminate
+   - Zero-downtime deployment
+
+### Cross-Account ECR Access
+
+For multi-account setups (e.g., shared ECR in central account):
+
+```hcl
+module "Keycloak" {
+  source = "path/to/modules/Keycloak"
+
+  create_ecr_repository   = true
+  ecr_allowed_account_ids = ["111111111111", "222222222222"]  # Allow these accounts to pull
+}
+```
+
+### ECR Security Best Practices
+
+1. **Enable image scanning**:
+
+   ```hcl
+   ecr_scan_on_push = true
+   ```
+
+2. **Use immutable tags in production**:
+
+   ```hcl
+   ecr_image_tag_mutability = "IMMUTABLE"
+   ```
+
+3. **Enable KMS encryption**:
+
+   ```hcl
+   ecr_kms_key_id = aws_kms_key.ecr.arn
+   ```
+
+4. **Set image retention policy** (automatically configured):
+   - Keeps last N tagged images
+   - Removes untagged images after 7 days
+
+### Troubleshooting Custom Images
+
+#### ECS task fails to start with custom image
+
+1. **Check image exists**:
+
+   ```bash
+   AWS ecr describe-images --repository-name $(Terraform output -raw ecr_repository_name)
+   ```
+
+2. **Verify ECS can pull from ECR**:
+   - The module automatically grants pull permissions
+   - Check CloudWatch logs for pull errors
+
+3. **Test image locally**:
+
+   ```bash
+   docker run -it --rm $(Terraform output -raw keycloak_image) start --help
+   ```
+
+#### Image vulnerabilities found
+
+```bash
+# Check scan results
+AWS ecr describe-image-scan-findings \
+  --repository-name $(Terraform output -raw ecr_repository_name) \
+  --image-id imageTag=latest
+```
+
+#### Rolling back to previous image
+
+```hcl
+# Change to previous working version
+keycloak_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/myapp-Keycloak-prod:v1.0.0"
+```
+
+```bash
+Terraform apply
 ```
 
 ## Pre-Deployment Verification
@@ -1326,6 +1820,367 @@ Terraform apply -var="keycloak_version=26.1"
 
 ECS will perform a rolling update with circuit breaker protection.
 
+## Migrating Between Database Types
+
+This section covers migrating your Keycloak deployment from one database type to another.
+
+### Important Notes
+
+- **Downtime required**: Database migration requires downtime (30-60 minutes)
+- **Backup first**: Always create a snapshot before migrating
+- **Test in dev**: Test the migration process in a dev environment first
+- **One-way process**: Migration creates a new database; rollback requires restoring from backup
+
+### Prerequisites
+
+Before migrating:
+
+1. Create a manual snapshot:
+
+   ```bash
+   # For RDS
+   AWS RDS create-db-snapshot \
+     --db-instance-identifier <instance-id> \
+     --db-snapshot-identifier Keycloak-pre-migration-$(date +%Y%m%d)
+
+   # For Aurora
+   AWS RDS create-db-cluster-snapshot \
+     --db-cluster-identifier <cluster-id> \
+     --db-cluster-snapshot-identifier Keycloak-pre-migration-$(date +%Y%m%d)
+   ```
+
+2. Note current configuration:
+
+   ```bash
+   Terraform show | grep -A 20 "db_"
+   ```
+
+3. Export Keycloak realm configuration (optional but recommended):
+
+   ```bash
+   # Via Keycloak admin console: Export realms
+   # Or use Keycloak CLI
+   ```
+
+### Migration Path 1: RDS → Aurora Provisioned
+
+**Use case**: Upgrading to enhanced HA, faster failover, or need for read replicas
+
+**Steps**:
+
+1. **Update Terraform configuration**:
+
+   ```hcl
+   # Change database type
+   database_type = "aurora"  # Was "RDS"
+
+   # Set Aurora-specific settings
+   db_instance_class = "db.r6g.large"  # Aurora instance class
+   aurora_replica_count = 1            # Add read replica
+   aurora_backtrack_window = 24        # Enable backtrack
+
+   # Remove RDS-specific settings
+   # db_allocated_storage = 100  # Not used for Aurora
+   ```
+
+2. **Plan the migration**:
+
+   ```bash
+   Terraform plan -out=migration.tfplan
+   ```
+
+   Review the plan carefully. You should see:
+   - `aws_db_instance.Keycloak[0]` will be destroyed
+   - `aws_rds_cluster.Keycloak[0]` will be created
+   - `aws_rds_cluster_instance` resources will be created
+
+3. **Schedule downtime** (recommend 1-hour maintenance window)
+
+4. **Stop Keycloak ECS tasks** to prevent write operations:
+
+   ```bash
+   AWS ECS update-service \
+     --cluster <cluster-name> \
+     --service <service-name> \
+     --desired-count 0
+
+   # Wait for tasks to stop
+   AWS ECS wait services-stable --cluster <cluster-name> --services <service-name>
+   ```
+
+5. **Create final RDS snapshot**:
+
+   ```bash
+   AWS RDS create-db-snapshot \
+     --db-instance-identifier <RDS-instance-id> \
+     --db-snapshot-identifier Keycloak-final-snapshot-$(date +%Y%m%d-%H%M)
+
+   # Wait for snapshot to complete
+   AWS RDS wait db-snapshot-completed \
+     --db-snapshot-identifier Keycloak-final-snapshot-$(date +%Y%m%d-%H%M)
+   ```
+
+6. **Apply Terraform changes**:
+
+   ```bash
+   Terraform apply migration.tfplan
+   ```
+
+   This will:
+   - Create Aurora cluster
+   - Restore data from RDS snapshot (if using restore method)
+   - Update Secrets Manager with new endpoint
+   - Delete old RDS instance
+
+   **Note**: Terraform will create a new Aurora cluster. To restore data, you need to either:
+
+   **Option A: Migrate data using pg_dump/pg_restore** (recommended):
+
+   ```bash
+   # Export from old RDS
+   pg_dump -h <old-RDS-endpoint> -U Keycloak -d Keycloak -F c -f keycloak_backup.dump
+
+   # Import to new Aurora
+   pg_restore -h <new-aurora-endpoint> -U Keycloak -d Keycloak keycloak_backup.dump
+   ```
+
+   **Option B: Restore Aurora from RDS snapshot** (requires AWS DMS or manual process):
+   - This is more complex and requires AWS Database Migration Service (DMS)
+   - See AWS documentation for RDS to Aurora migration
+
+7. **Restart Keycloak ECS tasks**:
+
+   ```bash
+   AWS ECS update-service \
+     --cluster <cluster-name> \
+     --service <service-name> \
+     --desired-count 2  # Or your original desired count
+   ```
+
+8. **Verify**:
+
+   ```bash
+   # Check Aurora cluster status
+   AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id>
+
+   # Test Keycloak access
+   curl -I $(Terraform output -raw keycloak_url)
+
+   # Verify admin login
+   ```
+
+9. **Monitor** for 24 hours before deleting old RDS snapshot
+
+### Migration Path 2: RDS → Aurora Serverless v2
+
+**Use case**: Variable workload, cost optimization, auto-scaling
+
+**Steps**:
+
+1. **Update Terraform configuration**:
+
+   ```hcl
+   # Change database type
+   database_type = "aurora-serverless"  # Was "RDS"
+
+   # Set serverless capacity
+   db_capacity_min = 0.5  # Minimum ACUs
+   db_capacity_max = 4    # Maximum ACUs
+
+   # Remove RDS and Provisioned settings
+   # db_allocated_storage = 100     # Not used
+   # aurora_replica_count = null    # Not supported in Serverless
+   # aurora_backtrack_window = null # Not supported in Serverless
+   ```
+
+2. **Follow same steps as RDS → Aurora Provisioned** (steps 2-9 above)
+
+3. **Monitor scaling** after migration:
+
+   ```bash
+   AWS cloudwatch get-metric-statistics \
+     --namespace AWS/RDS \
+     --metric-name ServerlessDatabaseCapacity \
+     --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
+     --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
+     --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+     --period 300 \
+     --statistics Average,Maximum
+   ```
+
+### Migration Path 3: Aurora Provisioned → Aurora Serverless v2
+
+**Use case**: Reduce costs for variable workloads
+
+**Steps**:
+
+1. **Create Aurora Provisioned snapshot**:
+
+   ```bash
+   AWS RDS create-db-cluster-snapshot \
+     --db-cluster-identifier <cluster-id> \
+     --db-cluster-snapshot-identifier aurora-to-serverless-$(date +%Y%m%d)
+   ```
+
+2. **Update configuration**:
+
+   ```hcl
+   database_type = "aurora-serverless"  # Was "aurora"
+
+   db_capacity_min = 0.5
+   db_capacity_max = 4
+
+   # Remove Provisioned-only settings
+   # aurora_replica_count = null    # Not supported
+   # aurora_backtrack_window = null # Not supported
+   ```
+
+3. **Follow migration steps** (similar to RDS → Aurora)
+
+### Migration Path 4: Aurora Serverless v2 → Aurora Provisioned
+
+**Use case**: Consistent high workload, need read replicas or backtrack
+
+**Steps**:
+
+1. **Analyze your workload** to determine appropriate instance class:
+
+   ```bash
+   # Check average ACU usage
+   AWS cloudwatch get-metric-statistics \
+     --namespace AWS/RDS \
+     --metric-name ServerlessDatabaseCapacity \
+     --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
+     --start-time $(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%S) \
+     --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+     --period 3600 \
+     --statistics Average | \
+     jq '.Datapoints | map(.Average) | add / length'
+   ```
+
+   **ACU to instance class mapping**:
+   - 0.5-2 ACU avg → db.t4g.medium / db.r6g.medium
+   - 2-4 ACU avg → db.r6g.large
+   - 4-8 ACU avg → db.r6g.xlarge
+   - 8-16 ACU avg → db.r6g.2xlarge
+
+2. **Update configuration**:
+
+   ```hcl
+   database_type = "aurora"  # Was "aurora-serverless"
+
+   db_instance_class = "db.r6g.large"  # Based on your analysis
+   aurora_replica_count = 1            # Add read replicas
+   aurora_backtrack_window = 24        # Enable backtrack
+
+   # Remove serverless settings
+   # db_capacity_min = null
+   # db_capacity_max = null
+   ```
+
+3. **Follow migration steps** (create snapshot, stop tasks, apply, restart)
+
+### Data Migration Methods
+
+#### Method 1: pg_dump/pg_restore (Recommended)
+
+**Pros**: Simple, reliable, works for all migration paths
+**Cons**: Requires downtime
+
+```bash
+# 1. Stop application
+AWS ECS update-service --cluster <cluster> --service <service> --desired-count 0
+
+# 2. Export data
+PGPASSWORD=$(AWS secretsmanager get-secret-value --secret-id <old-secret-id> \
+  --query 'SecretString' --output text | jq -r '.password') \
+pg_dump -h <old-endpoint> -U Keycloak -d Keycloak -F c -f keycloak_backup.dump
+
+# 3. Apply Terraform (creates new database)
+Terraform apply
+
+# 4. Import data
+PGPASSWORD=$(AWS secretsmanager get-secret-value --secret-id <new-secret-id> \
+  --query 'SecretString' --output text | jq -r '.password') \
+pg_restore -h <new-endpoint> -U Keycloak -d Keycloak -c keycloak_backup.dump
+
+# 5. Restart application
+AWS ECS update-service --cluster <cluster> --service <service> --desired-count 2
+```
+
+#### Method 2: AWS Database Migration Service (Near-zero downtime)
+
+**Pros**: Minimal downtime, continuous replication
+**Cons**: More complex, additional costs
+
+1. Create DMS replication instance
+2. Configure source (old database) and target (new database)
+3. Create migration task
+4. Start replication
+5. Monitor replication lag
+6. Switch application to new endpoint when lag is minimal
+
+See [AWS DMS documentation](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_GettingStarted.html) for detailed steps.
+
+### Rollback Procedure
+
+If migration fails:
+
+1. **Keep old database snapshot**
+
+2. **Restore from snapshot**:
+
+   ```bash
+   # For RDS
+   AWS RDS restore-db-instance-from-db-snapshot \
+     --db-instance-identifier Keycloak-rollback \
+     --db-snapshot-identifier Keycloak-pre-migration-<date>
+
+   # For Aurora
+   AWS RDS restore-db-cluster-from-snapshot \
+     --db-cluster-identifier Keycloak-rollback \
+     --snapshot-identifier Keycloak-pre-migration-<date>
+   ```
+
+3. **Update Terraform to point back** to old database type
+
+4. **Apply Terraform** to restore security groups and configurations
+
+5. **Restart Keycloak** with old database endpoint
+
+### Migration Checklist
+
+- [ ] Review current database metrics and usage patterns
+- [ ] Choose appropriate target database type and sizing
+- [ ] Test migration in dev/staging environment
+- [ ] Create pre-migration snapshot
+- [ ] Schedule maintenance window
+- [ ] Notify users of downtime
+- [ ] Export Keycloak realm configuration (backup)
+- [ ] Stop Keycloak ECS tasks
+- [ ] Create final snapshot
+- [ ] Apply Terraform changes
+- [ ] Migrate data (pg_dump/restore or DMS)
+- [ ] Update Secrets Manager (done automatically by Terraform)
+- [ ] Restart Keycloak ECS tasks
+- [ ] Verify database connectivity
+- [ ] Test Keycloak login and basic functionality
+- [ ] Monitor for 24-48 hours
+- [ ] Delete old database after verification (keep snapshots)
+
+### Cost Considerations
+
+Before migrating, compare costs:
+
+| From | To | Cost Change | Notes |
+| ---- | -- | ----------- | ----- |
+| RDS (db.t4g.micro) | Aurora Provisioned (db.r6g.large) | +400% | Better performance, HA |
+| RDS (db.t4g.micro) | Aurora Serverless (0.5-2 ACU) | +50% to +200% | Variable, depends on usage |
+| Aurora Provisioned | Aurora Serverless | -20% to -50% | If workload is variable |
+| Aurora Serverless | Aurora Provisioned | +50% to +100% | If using Serverless at high capacity |
+
+Use the cost calculator in each example README for detailed estimates.
+
 ## Troubleshooting
 
 ### Tasks not starting
@@ -1350,6 +2205,277 @@ ECS will perform a rolling update with circuit breaker protection.
 - Reduce `desired_count` for dev/test environments
 - Use smaller instance types (`db.t4g.micro`, `task_cpu=512`)
 - Disable multi-AZ for non-production
+
+### Aurora-Specific Issues
+
+#### Aurora Serverless v2 stuck at minimum capacity
+
+**Symptom**: Database running at minimum ACUs even under load
+
+**Causes**:
+
+- Scaling metrics not triggering scale-up (CPU/connections below threshold)
+- Database workload not CPU-intensive enough
+- Connection pooling preventing new connections
+
+**Solutions**:
+
+```bash
+# Check current capacity
+AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
+  --query 'DBClusters[0].ServerlessV2ScalingConfiguration'
+
+# Monitor scaling metrics
+AWS cloudwatch get-metric-statistics \
+  --namespace AWS/RDS \
+  --metric-name ServerlessDatabaseCapacity \
+  --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
+  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+  --period 300 \
+  --statistics Average
+```
+
+**Recommendations**:
+
+- Increase `db_capacity_max` if you need more headroom
+- Review CloudWatch metrics: `ServerlessDatabaseCapacity`, `CPUUtilization`
+- Consider Aurora Provisioned if workload is consistently high
+
+#### Aurora backtrack not working
+
+**Symptom**: Cannot backtrack to previous point in time
+
+**Causes**:
+
+- Backtrack only available for Aurora Provisioned (not Serverless or RDS)
+- Backtrack window set to 0 hours
+- Target time outside backtrack window
+
+**Solutions**:
+
+```hcl
+# Enable backtrack in your configuration
+aurora_backtrack_window = 24  # Hours (max 72)
+```
+
+```bash
+# Verify backtrack is enabled
+AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
+  --query 'DBClusters[0].BacktrackWindow'
+
+# Perform backtrack
+AWS RDS backtrack-db-cluster \
+  --db-cluster-identifier <cluster-id> \
+  --backtrack-to "2024-01-15T10:30:00Z"
+```
+
+**Note**: Backtrack is only available for Aurora Provisioned with MySQL-compatible engine
+
+#### Aurora read replicas not being created
+
+**Symptom**: No read replicas despite `multi_az = true`
+
+**Verification**:
+
+```bash
+# Check cluster instances
+AWS RDS describe-db-cluster-members --db-cluster-identifier <cluster-id>
+```
+
+**Causes**:
+
+1. Using Aurora Serverless v2 (read replicas not supported)
+2. `aurora_replica_count` explicitly set to 0
+3. Instance creation still in progress (can take 5-10 minutes)
+
+**Solutions**:
+
+```hcl
+# For Aurora Provisioned with explicit replica count
+database_type = "aurora"
+aurora_replica_count = 1  # Override auto-detection
+```
+
+**Check replica status**:
+
+```bash
+# List all cluster members
+AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
+  --query 'DBClusters[0].DBClusterMembers[*].[DBInstanceIdentifier,IsClusterWriter]'
+```
+
+#### Connection endpoint issues
+
+**Symptom**: Application cannot connect to database
+
+**Causes**:
+
+- Using wrong endpoint (writer vs reader vs cluster)
+- Security group not allowing ECS → RDS traffic
+- Secrets Manager endpoint not updated
+
+**Solutions**:
+
+1. **Verify endpoints**:
+
+```bash
+# Get all endpoints
+Terraform output db_instance_endpoint  # Writer endpoint
+Terraform output db_reader_endpoint    # Reader endpoint (Aurora only)
+
+# Or via AWS CLI
+AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
+  --query 'DBClusters[0].[Endpoint,ReaderEndpoint,Port]'
+```
+
+1. **Check Secrets Manager**:
+
+```bash
+# Verify secret contains correct endpoint
+AWS secretsmanager get-secret-value --secret-id <secret-id> \
+  --query 'SecretString' --output text | jq .
+```
+
+1. **Test connectivity from ECS task**:
+
+```bash
+# Start a one-off task with awscli
+AWS ECS run-task --cluster <cluster-name> \
+  --task-definition <task-def-arn> \
+  --network-configuration "awsvpcConfiguration={subnets=[<subnet-id>],securityGroups=[<sg-id>]}" \
+  --overrides '{"containerOverrides":[{"name":"Keycloak","command":["sh","-c","apk add PostgreSQL-client && psql -h <endpoint> -U Keycloak -d Keycloak -c \"\\dt\""]}]}'
+```
+
+#### Performance Insights showing high load
+
+**Symptom**: Database CPU high, slow queries
+
+**Investigation**:
+
+```bash
+# Enable Performance Insights (if not already)
+AWS RDS modify-db-instance --db-instance-identifier <instance-id> \
+  --enable-performance-insights \
+  --performance-insights-retention-period 7
+```
+
+**Common causes for Keycloak**:
+
+- Missing indexes on session tables
+- High number of active sessions
+- Frequent token validation queries
+- Insufficient database capacity
+
+**Solutions**:
+
+1. **For Aurora Serverless v2**: Increase `db_capacity_max`
+
+   ```hcl
+   db_capacity_max = 4  # Scale up to 4 ACUs
+   ```
+
+2. **For Aurora Provisioned**: Upgrade instance class
+
+   ```hcl
+   db_instance_class = "db.r6g.xlarge"  # More CPU/memory
+   ```
+
+3. **Add read replicas** (Aurora Provisioned only):
+
+   ```hcl
+   aurora_replica_count = 2  # Add 2 read replicas
+   ```
+
+4. **Optimize Keycloak**:
+   - Enable Keycloak caching
+   - Reduce session timeout
+   - Use external cache (Redis/Infinispan)
+
+#### Failover taking longer than expected
+
+**Symptom**: 30+ seconds to failover
+
+**Expected failover times**:
+
+- RDS: 60-120 seconds
+- Aurora Provisioned: ~30 seconds
+- Aurora Serverless v2: ~30 seconds
+
+**Causes**:
+
+- DNS propagation delay
+- Application not refreshing connections
+- Health check interval too long
+
+**Solutions**:
+
+1. **Reduce DNS TTL** in application connection pool
+2. **Use cluster endpoint** (not instance endpoint) for automatic failover
+3. **Implement connection retry logic** in application
+4. **Monitor failover events**:
+
+```bash
+AWS RDS describe-events --source-type db-cluster \
+  --source-identifier <cluster-id> \
+  --duration 60
+```
+
+#### Cost higher than expected
+
+**Symptom**: Aurora costs exceeding budget
+
+**Common causes**:
+
+1. **Aurora Serverless v2 not scaling down**:
+
+   ```bash
+   # Check if capacity is stuck at max
+   AWS cloudwatch get-metric-statistics \
+     --namespace AWS/RDS \
+     --metric-name ServerlessDatabaseCapacity \
+     --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
+     --statistics Average \
+     --start-time $(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%S) \
+     --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+     --period 3600
+   ```
+
+2. **I/O costs** (check CloudWatch `VolumeReadIOPs` and `VolumeWriteIOPs`)
+3. **Backtrack window** (costs $0.012/GB-hour for changes tracked)
+4. **Performance Insights retention** (extended retention costs extra)
+
+**Cost optimization**:
+
+```hcl
+# For dev/staging Aurora Serverless
+db_capacity_min = 0.5  # Minimum capacity
+db_capacity_max = 1    # Cap maximum spend
+
+# Disable backtrack for non-production
+aurora_backtrack_window = 0
+
+# Reduce Performance Insights retention
+db_performance_insights_retention_period = 7  # Default free tier
+
+# Or switch to RDS for dev
+database_type = "RDS"
+db_instance_class = "db.t4g.micro"
+```
+
+**Monitor costs**:
+
+```bash
+# Check Aurora I/O costs
+AWS cloudwatch get-metric-statistics \
+  --namespace AWS/RDS \
+  --metric-name VolumeReadIOPs \
+  --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
+  --statistics Sum \
+  --start-time $(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%S) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+  --period 86400
+```
 
 ## License
 

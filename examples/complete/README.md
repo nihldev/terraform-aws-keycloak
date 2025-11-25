@@ -8,6 +8,20 @@ This example demonstrates a complete Keycloak deployment with VPC creation.
 - NAT Gateway for private subnet internet access
 - Keycloak deployment using the module
 - All necessary networking, security, and IAM resources
+- Choice of database: RDS PostgreSQL, Aurora Provisioned, or Aurora Serverless v2
+
+## Database Options
+
+This example supports three database types via the `database_type` variable:
+
+1. **`RDS`** (default): RDS PostgreSQL - Most cost-effective, reliable
+2. **`aurora`**: Aurora Provisioned - Enhanced HA, read replicas, backtrack
+3. **`aurora-serverless`**: Aurora Serverless v2 - Auto-scaling, variable workloads
+
+See dedicated examples for Aurora:
+
+- [Aurora Provisioned Example](../aurora-provisioned/)
+- [Aurora Serverless Example](../aurora-serverless/)
 
 ## Prerequisites
 
@@ -57,12 +71,15 @@ This example demonstrates a complete Keycloak deployment with VPC creation.
 
 ## Configuration Examples
 
-### Development/Testing
+### Development/Testing (RDS)
 
 ```hcl
 name        = "myapp"
 environment = "dev"
 aws_region  = "us-east-1"
+
+# RDS PostgreSQL (default, most cost-effective)
+database_type = "RDS"
 
 # Minimal resources for cost savings
 multi_az              = false
@@ -73,12 +90,34 @@ db_instance_class     = "db.t4g.micro"
 db_allocated_storage  = 20
 ```
 
-### Production
+### Development with Aurora Serverless v2
+
+```hcl
+name        = "myapp"
+environment = "dev"
+aws_region  = "us-east-1"
+
+# Aurora Serverless v2 (auto-scaling)
+database_type   = "aurora-serverless"
+db_capacity_min = 0.5  # Minimum ACUs (scales down when idle)
+db_capacity_max = 2    # Maximum ACUs (caps cost)
+
+# Minimal resources
+multi_az      = false
+desired_count = 1
+task_cpu      = 512
+task_memory   = 1024
+```
+
+### Production with RDS
 
 ```hcl
 name        = "myapp"
 environment = "prod"
 aws_region  = "us-east-1"
+
+# RDS PostgreSQL (reliable, cost-effective)
+database_type = "RDS"
 
 # High availability and performance
 multi_az                   = true
@@ -88,6 +127,33 @@ task_memory                = 4096
 db_instance_class          = "db.r6g.large"
 db_allocated_storage       = 100
 db_backup_retention_period = 30
+
+# HTTPS with custom domain
+keycloak_hostname = "auth.example.com"
+certificate_arn   = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+```
+
+### Production with Aurora Provisioned
+
+```hcl
+name        = "myapp"
+environment = "prod"
+aws_region  = "us-east-1"
+
+# Aurora Provisioned (enhanced HA, read replicas, backtrack)
+database_type = "aurora"
+
+# High availability with read replicas
+multi_az             = true
+aurora_replica_count = 2  # 1 writer + 2 readers
+desired_count        = 3
+task_cpu             = 2048
+task_memory          = 4096
+db_instance_class    = "db.r6g.large"
+
+# Aurora-specific features
+aurora_backtrack_window = 24  # 24-hour backtrack window
+db_performance_insights_retention_period = 31
 
 # HTTPS with custom domain
 keycloak_hostname = "auth.example.com"

@@ -28,6 +28,7 @@ module "vpc" {
   name = "${var.name}-vpc-${var.environment}"
   cidr = "10.0.0.0/16"
 
+  # 3 AZs for high availability with Aurora
   azs             = slice(data.aws_availability_zones.available.names, 0, 3)
   private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
@@ -38,11 +39,6 @@ module "vpc" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  # VPC Flow Logs
-  enable_flow_log                      = true
-  create_flow_log_cloudwatch_iam_role  = true
-  create_flow_log_cloudwatch_log_group = true
-
   tags = {
     Name        = "${var.name}-vpc-${var.environment}"
     Environment = var.environment
@@ -51,7 +47,7 @@ module "vpc" {
 }
 
 #######################
-# Keycloak Module
+# Keycloak Module with Aurora Provisioned
 #######################
 
 module "keycloak" {
@@ -65,7 +61,7 @@ module "keycloak" {
   public_subnet_ids  = module.vpc.public_subnets
   private_subnet_ids = module.vpc.private_subnets
 
-  # High availability
+  # High availability with Aurora Provisioned
   multi_az      = var.multi_az
   desired_count = var.desired_count
 
@@ -74,18 +70,19 @@ module "keycloak" {
   task_cpu         = var.task_cpu
   task_memory      = var.task_memory
 
-  # Database configuration
-  database_type              = var.database_type
-  db_instance_class          = var.db_instance_class
-  db_allocated_storage       = var.db_allocated_storage
-  db_backup_retention_period = var.db_backup_retention_period
+  # Aurora Provisioned configuration
+  database_type     = "aurora"
+  db_instance_class = var.db_instance_class
 
-  # Aurora-specific configuration (only used if database_type is aurora or aurora-serverless)
-  db_capacity_min                          = var.db_capacity_min
-  db_capacity_max                          = var.db_capacity_max
-  aurora_replica_count                     = var.aurora_replica_count
-  aurora_backtrack_window                  = var.aurora_backtrack_window
+  # Aurora-specific settings
+  aurora_replica_count    = var.aurora_replica_count    # null = auto (1 if multi_az, 0 if not)
+  aurora_backtrack_window = var.aurora_backtrack_window # null = auto (24h prod, 0 non-prod)
+
+  # Performance Insights retention (Aurora Provisioned prod gets 31 days by default)
   db_performance_insights_retention_period = var.db_performance_insights_retention_period
+
+  # Backup configuration
+  db_backup_retention_period = var.db_backup_retention_period
 
   # Keycloak configuration
   keycloak_hostname = var.keycloak_hostname
@@ -98,8 +95,9 @@ module "keycloak" {
   allowed_cidr_blocks = var.allowed_cidr_blocks
 
   tags = {
-    Project     = var.name
-    Environment = var.environment
-    ManagedBy   = "Terraform"
+    Project      = var.name
+    Environment  = var.environment
+    ManagedBy    = "Terraform"
+    DatabaseType = "aurora-provisioned"
   }
 }

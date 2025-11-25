@@ -152,7 +152,7 @@ resource "aws_ecs_task_definition" "keycloak" {
   container_definitions = jsonencode([
     {
       name  = "keycloak"
-      image = "quay.io/keycloak/keycloak:${var.keycloak_version}"
+      image = local.keycloak_image
 
       # Using 'start' instead of 'start --optimized' to allow runtime configuration
       # and proper database initialization on first deployment

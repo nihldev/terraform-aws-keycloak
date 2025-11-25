@@ -518,3 +518,162 @@ variable "db_pool_max_size" {
   type        = number
   default     = 20
 }
+
+#######################
+# SES Email Configuration
+#######################
+
+variable "enable_ses" {
+  description = <<-EOT
+    Enable SES integration for Keycloak email functionality.
+    When enabled, creates:
+    - SES domain identity with DKIM
+    - IAM user for SMTP credentials
+    - Secrets Manager secret with SMTP configuration
+
+    Note: SES starts in sandbox mode. You must request production access
+    to send emails to non-verified addresses.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "ses_domain" {
+  description = <<-EOT
+    Domain to use for sending emails via SES.
+    This domain will be verified with SES and DKIM will be configured.
+    Required if enable_ses = true.
+    Example: "example.com" or "mail.example.com"
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "ses_email_identity" {
+  description = <<-EOT
+    Optional: Specific email address to verify instead of (or in addition to) domain.
+    Useful for testing in SES sandbox mode without domain verification.
+    Example: "noreply@example.com"
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "ses_from_email" {
+  description = <<-EOT
+    Email address to use as the 'From' address for Keycloak emails.
+    Must be from the verified domain or verified email identity.
+    Defaults to "noreply@{ses_domain}" if not specified.
+    Example: "keycloak@example.com" or "noreply@example.com"
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "ses_route53_zone_id" {
+  description = <<-EOT
+    Route53 hosted zone ID for automatic DNS record creation.
+    If provided, the module will automatically create:
+    - TXT record for domain verification
+    - CNAME records for DKIM
+
+    If not provided, you must manually create these DNS records.
+    The required records will be available in the outputs.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "ses_configuration_set_enabled" {
+  description = <<-EOT
+    Enable SES Configuration Set for email tracking and metrics.
+    Creates CloudWatch metrics for:
+    - Send, reject, bounce, complaint events
+    - Delivery, open, click tracking
+
+    Useful for monitoring email deliverability.
+  EOT
+  type        = bool
+  default     = false
+}
+
+#######################
+# Custom Image / ECR Configuration
+#######################
+
+variable "keycloak_image" {
+  description = <<-EOT
+    Custom Keycloak Docker image URI.
+    Use this to deploy a custom Keycloak image with themes, providers, or extensions.
+
+    Examples:
+    - ECR: "123456789.dkr.ecr.us-east-1.amazonaws.com/keycloak:v1.0.0"
+    - Docker Hub: "myorg/keycloak-custom:latest"
+
+    If empty (default), uses the official Keycloak image from quay.io.
+    If create_ecr_repository = true and this is empty, uses the created ECR repo.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "create_ecr_repository" {
+  description = <<-EOT
+    Create an ECR repository for custom Keycloak images.
+    When enabled, the module creates:
+    - ECR repository with image scanning
+    - Lifecycle policy to manage image retention
+    - Repository URL output for pushing images
+
+    Use this when you want to build and store custom Keycloak images.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "ecr_image_tag_mutability" {
+  description = <<-EOT
+    Image tag mutability setting for ECR repository.
+    - MUTABLE: Tags can be overwritten (convenient for dev)
+    - IMMUTABLE: Tags cannot be overwritten (recommended for prod)
+  EOT
+  type        = string
+  default     = "MUTABLE"
+
+  validation {
+    condition     = contains(["MUTABLE", "IMMUTABLE"], var.ecr_image_tag_mutability)
+    error_message = "ecr_image_tag_mutability must be MUTABLE or IMMUTABLE."
+  }
+}
+
+variable "ecr_scan_on_push" {
+  description = "Enable vulnerability scanning when images are pushed to ECR"
+  type        = bool
+  default     = true
+}
+
+variable "ecr_image_retention_count" {
+  description = "Number of tagged images to retain in ECR (older images are deleted)"
+  type        = number
+  default     = 30
+}
+
+variable "ecr_kms_key_id" {
+  description = <<-EOT
+    KMS key ID for ECR image encryption.
+    If empty, uses default AES256 encryption.
+    If provided, uses KMS encryption with the specified key.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "ecr_allowed_account_ids" {
+  description = <<-EOT
+    List of AWS account IDs allowed to pull images from this ECR repository.
+    Useful for cross-account deployments.
+    Leave empty for same-account only access.
+  EOT
+  type        = list(string)
+  default     = []
+}

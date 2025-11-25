@@ -28,6 +28,31 @@ output "vpc_id" {
   value       = module.vpc.vpc_id
 }
 
+output "database_type" {
+  description = "Database type deployed"
+  value       = module.keycloak.database_type
+}
+
+output "db_instance_endpoint" {
+  description = "Database writer endpoint"
+  value       = module.keycloak.db_instance_endpoint
+}
+
+output "db_reader_endpoint" {
+  description = "Aurora cluster reader endpoint (empty for RDS)"
+  value       = module.keycloak.db_reader_endpoint
+}
+
+output "ecs_cluster_name" {
+  description = "ECS cluster name"
+  value       = module.keycloak.ecs_cluster_name
+}
+
+output "cost_warning" {
+  description = "Cost optimization recommendations"
+  value       = module.keycloak.cost_warning
+}
+
 output "get_admin_credentials_command" {
   description = "AWS CLI command to retrieve admin credentials"
   value       = "aws secretsmanager get-secret-value --secret-id ${module.keycloak.admin_credentials_secret_arn} --query SecretString --output text | jq -r '.username, .password'"

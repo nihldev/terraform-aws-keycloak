@@ -165,3 +165,98 @@ output "keycloak_admin_console_url" {
   description = "URL to access Keycloak admin console"
   value       = var.certificate_arn != "" ? "https://${var.keycloak_hostname != "" ? var.keycloak_hostname : aws_lb.keycloak.dns_name}/admin" : "http://${aws_lb.keycloak.dns_name}/admin"
 }
+
+#######################
+# SES Email Outputs
+#######################
+
+output "ses_domain_identity_arn" {
+  description = "ARN of the SES domain identity (empty if SES not enabled)"
+  value       = var.enable_ses ? aws_ses_domain_identity.keycloak[0].arn : ""
+}
+
+output "ses_domain_verification_token" {
+  description = "TXT record value for SES domain verification (add to DNS if not using Route53)"
+  value       = var.enable_ses ? aws_ses_domain_identity.keycloak[0].verification_token : ""
+}
+
+output "ses_dkim_tokens" {
+  description = "DKIM tokens for email authentication (add CNAME records to DNS if not using Route53)"
+  value       = var.enable_ses ? aws_ses_domain_dkim.keycloak[0].dkim_tokens : []
+}
+
+output "ses_smtp_endpoint" {
+  description = "SES SMTP endpoint for Keycloak email configuration"
+  value       = var.enable_ses ? "email-smtp.${data.aws_region.current.name}.amazonaws.com" : ""
+}
+
+output "ses_smtp_credentials_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing SMTP credentials"
+  value       = var.enable_ses ? aws_secretsmanager_secret.ses_smtp[0].arn : ""
+}
+
+output "ses_smtp_credentials_secret_id" {
+  description = "Secret ID for retrieving SMTP credentials (use: aws secretsmanager get-secret-value --secret-id <this-value>)"
+  value       = var.enable_ses ? aws_secretsmanager_secret.ses_smtp[0].id : ""
+}
+
+output "ses_from_email" {
+  description = "Email address configured for sending (use in Keycloak realm settings)"
+  value       = var.enable_ses ? (var.ses_from_email != "" ? var.ses_from_email : "noreply@${var.ses_domain}") : ""
+}
+
+output "ses_configuration_set_name" {
+  description = "SES Configuration Set name for email tracking (empty if not enabled)"
+  value       = var.enable_ses && var.ses_configuration_set_enabled ? aws_ses_configuration_set.keycloak[0].name : ""
+}
+
+output "ses_dns_records_required" {
+  description = "DNS records required for SES verification (only shown if Route53 zone not provided)"
+  value = var.enable_ses && var.ses_route53_zone_id == "" ? {
+    verification_txt = {
+      name  = "_amazonses.${var.ses_domain}"
+      type  = "TXT"
+      value = aws_ses_domain_identity.keycloak[0].verification_token
+    }
+    dkim_cnames = [
+      for i, token in aws_ses_domain_dkim.keycloak[0].dkim_tokens : {
+        name  = "${token}._domainkey.${var.ses_domain}"
+        type  = "CNAME"
+        value = "${token}.dkim.amazonses.com"
+      }
+    ]
+  } : null
+}
+
+#######################
+# ECR / Custom Image Outputs
+#######################
+
+output "keycloak_image" {
+  description = "The Keycloak Docker image being used (official or custom)"
+  value       = local.keycloak_image
+}
+
+output "ecr_repository_url" {
+  description = "ECR repository URL for pushing custom images (empty if not created)"
+  value       = var.create_ecr_repository ? aws_ecr_repository.keycloak[0].repository_url : ""
+}
+
+output "ecr_repository_arn" {
+  description = "ARN of the ECR repository (empty if not created)"
+  value       = var.create_ecr_repository ? aws_ecr_repository.keycloak[0].arn : ""
+}
+
+output "ecr_repository_name" {
+  description = "Name of the ECR repository (empty if not created)"
+  value       = var.create_ecr_repository ? aws_ecr_repository.keycloak[0].name : ""
+}
+
+output "ecr_push_commands" {
+  description = "Commands to authenticate and push images to ECR"
+  value = var.create_ecr_repository ? {
+    login = "aws ecr get-login-password --region ${data.aws_region.current.name} | docker login --username AWS --password-stdin ${aws_ecr_repository.keycloak[0].repository_url}"
+    build = "docker build -t ${aws_ecr_repository.keycloak[0].repository_url}:latest ."
+    push  = "docker push ${aws_ecr_repository.keycloak[0].repository_url}:latest"
+  } : null
+}
