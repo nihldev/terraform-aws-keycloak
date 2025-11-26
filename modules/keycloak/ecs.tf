@@ -269,6 +269,9 @@ resource "aws_ecs_service" "keycloak" {
     rollback = true
   }
 
+  # Propagate tags from service to tasks for better resource tracking
+  propagate_tags = "SERVICE"
+
   # Note: ordered_placement_strategy is not supported for Fargate launch type
   # Fargate automatically spreads tasks across AZs when using multiple subnets
 

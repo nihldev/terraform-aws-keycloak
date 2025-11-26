@@ -93,6 +93,38 @@ variable "alb_deletion_protection" {
   default     = null
 }
 
+variable "alb_stickiness_enabled" {
+  description = <<-EOT
+    Enable session stickiness on the ALB target group.
+
+    When enabled, the ALB uses cookies to route requests from the same client
+    to the same target. This can be useful for:
+    - Long-running admin operations in Keycloak
+    - Debugging specific instance behavior
+    - Scenarios where session affinity is required
+
+    Note: Keycloak typically doesn't require stickiness because:
+    - Sessions are stored in the database
+    - Distributed cache (jdbc-ping) handles session replication
+    - All instances can serve any request
+
+    Only enable if you have a specific need for session affinity.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "alb_stickiness_duration" {
+  description = "Duration in seconds for ALB session stickiness cookie (1-604800). Only used when alb_stickiness_enabled is true."
+  type        = number
+  default     = 86400
+
+  validation {
+    condition     = var.alb_stickiness_duration >= 1 && var.alb_stickiness_duration <= 604800
+    error_message = "Stickiness duration must be between 1 and 604800 seconds (7 days)."
+  }
+}
+
 variable "waf_acl_arn" {
   description = "ARN of AWS WAF WebACL to associate with ALB (STRONGLY RECOMMENDED for production environments to protect against web exploits, DDoS, and credential stuffing attacks)"
   type        = string

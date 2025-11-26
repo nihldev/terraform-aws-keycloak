@@ -398,6 +398,8 @@ resource "aws_rds_cluster_instance" "keycloak_writer" {
       Role        = "writer"
     }
   )
+
+  depends_on = [aws_rds_cluster.keycloak]
 }
 
 # Reader instances (count based on aurora_replica_count)
@@ -425,6 +427,8 @@ resource "aws_rds_cluster_instance" "keycloak_reader" {
       Role        = "reader"
     }
   )
+
+  depends_on = [aws_rds_cluster.keycloak]
 }
 
 #######################
@@ -457,6 +461,8 @@ resource "aws_rds_cluster_instance" "keycloak_serverless_writer" {
       Role         = "writer"
     }
   )
+
+  depends_on = [aws_rds_cluster.keycloak]
 }
 
 # Reader instances (count based on aurora_replica_count, same as Aurora Provisioned)
@@ -485,6 +491,8 @@ resource "aws_rds_cluster_instance" "keycloak_serverless_reader" {
       Role         = "reader"
     }
   )
+
+  depends_on = [aws_rds_cluster.keycloak]
 }
 
 #######################

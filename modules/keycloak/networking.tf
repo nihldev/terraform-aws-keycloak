@@ -187,6 +187,17 @@ resource "aws_lb_target_group" "keycloak" {
   # - Custom session timeout > 30s
   deregistration_delay = 30
 
+  # Session stickiness configuration
+  # When enabled, ALB routes requests from the same client to the same target
+  dynamic "stickiness" {
+    for_each = var.alb_stickiness_enabled ? [1] : []
+    content {
+      type            = "lb_cookie"
+      cookie_duration = var.alb_stickiness_duration
+      enabled         = true
+    }
+  }
+
   tags = merge(
     var.tags,
     {

@@ -30,6 +30,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_high_cpu" {
   statistic           = "Average"
   threshold           = 80
   alarm_description   = "Keycloak ECS CPU utilization is above 80%"
+  treat_missing_data  = "notBreaching"
 
   alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
   ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
@@ -59,6 +60,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_high_memory" {
   statistic           = "Average"
   threshold           = 80
   alarm_description   = "Keycloak ECS memory utilization is above 80%"
+  treat_missing_data  = "notBreaching"
 
   alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
   ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
@@ -88,6 +90,7 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_targets" {
   statistic           = "Average"
   threshold           = 0
   alarm_description   = "Keycloak has unhealthy targets"
+  treat_missing_data  = "notBreaching"
 
   alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
   ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
@@ -119,6 +122,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_high_cpu" {
   statistic           = "Average"
   threshold           = 80
   alarm_description   = "Keycloak RDS CPU utilization is above 80%"
+  treat_missing_data  = "notBreaching"
 
   alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
   ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
@@ -149,6 +153,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_low_storage" {
   statistic           = "Average"
   threshold           = 5368709120 # 5 GB in bytes
   alarm_description   = "Keycloak RDS free storage space is below 5 GB"
+  treat_missing_data  = "notBreaching"
 
   alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
   ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
@@ -179,6 +184,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_high_cpu" {
   statistic           = "Average"
   threshold           = 80
   alarm_description   = "Keycloak Aurora cluster CPU utilization is above 80%"
+  treat_missing_data  = "notBreaching"
 
   alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
   ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
@@ -210,6 +216,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_serverless_high_capacity" {
   statistic           = "Average"
   threshold           = var.db_capacity_max * 0.8 # Alert at 80% of max capacity
   alarm_description   = "Aurora Serverless v2 capacity is above 80% of maximum (${var.db_capacity_max} ACUs). Consider increasing db_capacity_max."
+  treat_missing_data  = "notBreaching"
 
   alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
   ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
