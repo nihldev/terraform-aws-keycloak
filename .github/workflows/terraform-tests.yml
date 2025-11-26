@@ -65,6 +65,20 @@ jobs:
           npm install -g markdownlint-cli2 prettier
           pip install yamllint ruff basedpyright
 
+      - name: Install additional tools
+        run: |
+          # Install shellcheck
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          # Install taplo for TOML linting
+          curl -fsSL https://github.com/tamasfe/taplo/releases/latest/download/taplo-full-linux-x86_64.gz | gunzip > /usr/local/bin/taplo
+          chmod +x /usr/local/bin/taplo
+          # Install gitleaks for secret detection
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar xz -C /usr/local/bin gitleaks
+          # Install terraform-docs
+          curl -fsSL https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz | tar xz -C /usr/local/bin terraform-docs
+          # Install conftest for OPA policy testing
+          curl -fsSL https://github.com/open-policy-agent/conftest/releases/download/v0.56.0/conftest_0.56.0_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin conftest
+
       # Terraform formatting
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
@@ -102,6 +116,37 @@ jobs:
       # Python type checking
       - name: Python Type Check (Basedpyright)
         run: basedpyright
+
+      # Shell script linting
+      - name: Shellcheck
+        run: |
+          shellcheck scripts/*.sh
+
+      # TOML linting
+      - name: TOML Lint (Taplo)
+        run: |
+          taplo lint
+          taplo fmt --check
+
+      # Secret detection
+      - name: Secret Detection (Gitleaks)
+        run: |
+          gitleaks git --redact --verbose
+
+      # Terraform docs validation
+      - name: Terraform Docs Check
+        run: |
+          terraform-docs markdown table --output-file README.md --output-mode inject modules/keycloak
+          if ! git diff --quiet README.md; then
+            echo "Error: README.md is out of date. Run 'terraform-docs markdown table --output-file README.md --output-mode inject modules/keycloak'"
+            git diff README.md
+            exit 1
+          fi
+
+      # Check tfvars.example coverage
+      - name: Check tfvars.example Coverage
+        run: |
+          ./scripts/check-tfvars-coverage.sh
 
       # Check for trailing whitespace and file endings
       - name: Check file formatting
@@ -178,7 +223,6 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      # Trivy security scanner (replaced tfsec which is deprecated)
       - name: Run Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -201,6 +245,15 @@ jobs:
       - name: Run TFLint
         working-directory: modules/keycloak
         run: tflint -f compact --config=../../.tflint.hcl
+
+      # OPA/Conftest policy validation
+      - name: Install Conftest
+        run: |
+          curl -fsSL https://github.com/open-policy-agent/conftest/releases/download/v0.56.0/conftest_0.56.0_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin conftest
+
+      - name: Run Conftest Policy Checks
+        run: |
+          conftest test --policy policy/ modules/ --all-namespaces || true
 
   #######################
   # Plan-Only Tests

@@ -34,6 +34,9 @@ This installs:
 - **Terraform-docs** - Documentation generator
 - **taplo** - TOML formatter and linter
 - **markdownlint-cli** - Markdown linter
+- **shellcheck** - Shell script linter
+- **gitleaks** - Secret detection scanner
+- **conftest** - OPA policy testing
 - **Python 3.11** - Required for SES SMTP password derivation and linting tools
 - **ruff** - Python linter and formatter
 - **basedpyright** - Python type checker
@@ -67,7 +70,6 @@ Pre-push hooks run automatically when you push to the remote repository and will
 
 **TOML:**
 
-- Validate TOML syntax (`check-toml`)
 - Format TOML files (`taplo format`)
 - Lint TOML files (`taplo lint`)
 
@@ -79,7 +81,7 @@ Pre-push hooks run automatically when you push to the remote repository and will
 **General:**
 
 - Check for large files, merge conflicts, trailing whitespace
-- Detect private keys and AWS credentials
+- Detect secrets with gitleaks
 - Ensure files end with newlines
 
 The hooks are automatically installed by mise as pre-push hooks. No manual setup required!
@@ -380,7 +382,7 @@ terraform validate
 
 - **NEVER** commit secrets, credentials, or sensitive data
 - Use AWS Secrets Manager for sensitive values
-- The pre-push hooks check for AWS credentials and private keys
+- The pre-push hooks scan for secrets with gitleaks
 - Review `.gitignore` to ensure sensitive files are excluded
 
 ### Security Scanning
@@ -451,7 +453,8 @@ This repository uses comprehensive automated checks to catch issues before code 
 | **tfvars Coverage** | Missing variable examples | ❌ No | custom script |
 | **Markdown Lint** | Markdown formatting issues | ✅ Yes | markdownlint |
 | **TOML Format** | TOML syntax and style | ✅ Yes | taplo |
-| **Secret Detection** | AWS credentials, private keys | ❌ No | pre-commit |
+| **Shellcheck** | Shell script issues, bugs, portability | ❌ No | shellcheck |
+| **Secret Detection** | Hardcoded secrets, API keys, passwords | ❌ No | gitleaks |
 
 ### OPA/Conftest Policies (Keycloak-Specific)
 

@@ -17,7 +17,7 @@ EXAMPLES_DIR="examples"
 MISSING_VARS_FOUND=false
 
 # Check each example directory
-for EXAMPLE in $(find "$EXAMPLES_DIR" -type d -mindepth 1 -maxdepth 1); do
+while IFS= read -r -d '' EXAMPLE; do
     EXAMPLE_NAME=$(basename "$EXAMPLE")
     TFVARS_EXAMPLE="$EXAMPLE/terraform.tfvars.example"
 
@@ -40,8 +40,11 @@ for EXAMPLE in $(find "$EXAMPLES_DIR" -type d -mindepth 1 -maxdepth 1); do
 
     # For each module, check if all variables are documented in tfvars.example
     for MODULE_PATH in $MODULES; do
-        # Remove leading ../../ or ../
-        MODULE_PATH=$(echo "$MODULE_PATH" | sed 's|^\.*/||')
+        # Remove leading dots and slashes (../../ or ../)
+        while [[ "$MODULE_PATH" == .* ]]; do
+            MODULE_PATH="${MODULE_PATH#.}"
+            MODULE_PATH="${MODULE_PATH#/}"
+        done
         VARIABLES_FILE="$MODULE_PATH/variables.tf"
 
         if [[ ! -f "$VARIABLES_FILE" ]]; then
@@ -67,7 +70,7 @@ for EXAMPLE in $(find "$EXAMPLES_DIR" -type d -mindepth 1 -maxdepth 1); do
             echo -e "${GREEN}  ✓ All variables documented${NC}"
         fi
     done
-done
+done < <(find "$EXAMPLES_DIR" -type d -mindepth 1 -maxdepth 1 -print0)
 
 echo ""
 echo "========================================"

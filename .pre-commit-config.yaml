@@ -60,16 +60,6 @@ repos:
         name: Check for merge conflicts
         stages: [pre-commit]
 
-      # Check YAML files (pre-commit - fast)
-      - id: check-yaml
-        name: Check YAML syntax
-        stages: [pre-commit]
-
-      # Check TOML files (pre-commit - fast)
-      - id: check-toml
-        name: Check TOML syntax
-        stages: [pre-commit]
-
       # Check for trailing whitespace (pre-commit - fast)
       - id: trailing-whitespace
         name: Trim trailing whitespace
@@ -80,17 +70,6 @@ repos:
       - id: end-of-file-fixer
         name: Fix end of files
         stages: [pre-commit]
-
-      # Check for private keys (pre-push - security critical)
-      - id: detect-private-key
-        name: Detect private keys
-        stages: [pre-push]
-
-      # Check for AWS credentials (pre-push - security critical)
-      - id: detect-aws-credentials
-        name: Detect AWS credentials
-        stages: [pre-push]
-        args: ['--allow-missing-credentials']
 
   # TOML formatting and linting
   - repo: https://github.com/ComPWA/taplo-pre-commit
@@ -182,4 +161,31 @@ repos:
         entry: basedpyright
         language: system
         types: [python]
+        stages: [pre-push]
+
+      # Shell script linting (pre-commit - fast)
+      - id: shellcheck
+        name: Shellcheck
+        description: Static analysis tool for shell scripts
+        entry: shellcheck
+        language: system
+        types: [shell]
+        stages: [pre-commit]
+
+      # YAML linting (pre-commit - fast)
+      - id: yamllint
+        name: YAML lint
+        description: Linter for YAML files
+        entry: yamllint -d relaxed
+        language: system
+        types: [yaml]
+        stages: [pre-commit]
+
+      # Secret detection with gitleaks (pre-push - security critical)
+      - id: gitleaks
+        name: Gitleaks secret detection
+        description: Detect hardcoded secrets in git repos
+        entry: gitleaks git --pre-commit --redact --staged --verbose
+        language: system
+        pass_filenames: false
         stages: [pre-push]

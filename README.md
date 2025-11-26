@@ -89,6 +89,9 @@ inputs = {
    - Terraform-docs (documentation generator)
    - taplo (TOML formatter and linter)
    - markdownlint-cli (Markdown linter)
+   - shellcheck (shell script linter)
+   - gitleaks (secret detection)
+   - conftest (OPA policy testing)
 
 3. Verify setup:
 

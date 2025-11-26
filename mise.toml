@@ -8,9 +8,12 @@ terraform      = "1.14.0"
 tflint         = "latest"
 trivy          = "latest"
 terraform-docs = "latest"
+conftest       = "latest"
 
 # Code Quality
 pre-commit = "latest"
+shellcheck = "latest"
+gitleaks   = "latest"
 
 # Python runtime (required for SES SMTP password derivation in keycloak module)
 python = "3.11"
@@ -18,6 +21,7 @@ python = "3.11"
 # Python linting and formatting
 ruff = "latest"
 "pipx:basedpyright" = "latest"
+"pipx:yamllint" = "latest"
 
 # TOML formatting and linting
 taplo = "latest"
@@ -102,3 +106,19 @@ run         = "terraform test"
 [tasks."test:fast"]
 description = "Run fast plan-only tests"
 run         = "terraform test ./tests/module_validation.tftest.hcl ./tests/variable_combinations.tftest.hcl"
+
+[tasks.lint-sh]
+description = "Lint shell scripts with shellcheck"
+run         = "shellcheck scripts/*.sh"
+
+[tasks.lint-yaml]
+description = "Lint YAML files with yamllint"
+run         = "yamllint -d relaxed ."
+
+[tasks.secrets]
+description = "Scan for secrets with gitleaks"
+run         = "gitleaks git --redact --verbose"
+
+[tasks.policy]
+description = "Run OPA policy checks with conftest"
+run         = "conftest test --policy policy/ modules/ --all-namespaces"
