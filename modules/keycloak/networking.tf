@@ -20,7 +20,8 @@ resource "aws_security_group" "alb" {
   }
 }
 
-#tfsec:ignore:aws-ec2-no-public-ingress-sgr
+# tfsec:ignore:aws-ec2-no-public-ingress-sgr -- ALB ingress for Keycloak authentication.
+# Access restricted via allowed_cidr_blocks (0.0.0.0/0 blocked in prod by validation).
 resource "aws_security_group_rule" "alb_ingress_http" {
   type              = "ingress"
   from_port         = 80
@@ -31,6 +32,8 @@ resource "aws_security_group_rule" "alb_ingress_http" {
   description       = "Allow HTTP inbound traffic"
 }
 
+# tfsec:ignore:aws-ec2-no-public-ingress-sgr -- ALB ingress for Keycloak authentication.
+# Access restricted via allowed_cidr_blocks (0.0.0.0/0 blocked in prod by validation).
 resource "aws_security_group_rule" "alb_ingress_https" {
   count             = var.certificate_arn != "" ? 1 : 0
   type              = "ingress"
@@ -94,7 +97,7 @@ resource "aws_security_group_rule" "ecs_tasks_ingress_from_alb" {
 # - DNS resolution
 # - NTP time sync
 # Actual database access is controlled by RDS security group ingress rules
-#tfsec:ignore:aws-ec2-no-public-egress-sgr
+# tfsec:ignore:aws-ec2-no-public-egress-sgr -- Required for container images, external IdP integration, DNS, NTP.
 resource "aws_security_group_rule" "ecs_tasks_egress" {
   type              = "egress"
   from_port         = 0
@@ -109,7 +112,8 @@ resource "aws_security_group_rule" "ecs_tasks_egress" {
 # Application Load Balancer
 #######################
 
-#tfsec:ignore:aws-elb-alb-not-public
+# tfsec:ignore:aws-elb-alb-not-public -- Keycloak is a user-facing IdP requiring public access.
+# Protected by WAF (required for prod), CIDR restrictions, and deletion protection.
 resource "aws_lb" "keycloak" {
   name               = "${var.name}-keycloak-${var.environment}"
   internal           = false
@@ -191,7 +195,7 @@ resource "aws_lb_target_group" "keycloak" {
 #######################
 
 # HTTP Listener - redirect to HTTPS if certificate is provided, otherwise forward to target group
-#tfsec:ignore:aws-elb-http-not-used
+# tfsec:ignore:aws-elb-http-not-used -- Redirects to HTTPS when certificate configured, or serves dev/test.
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.keycloak.arn
   port              = 80
