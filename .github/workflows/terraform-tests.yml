@@ -242,9 +242,9 @@ jobs:
 
       - name: Run Test - ${{ matrix.test }}
         run: |
-          # Run only plan-based tests (filter out apply tests)
-          terraform test tests/${{ matrix.test }}.tftest.hcl -verbose 2>&1 | head -500 || true
-        timeout-minutes: 15
+          set -o pipefail
+          terraform test tests/${{ matrix.test }}.tftest.hcl -verbose 2>&1 | head -500
+        timeout-minutes: 20
 
   #######################
   # Output Validation Tests
@@ -277,7 +277,8 @@ jobs:
 
       - name: Run Output Validation Tests
         run: |
-          terraform test tests/outputs_validation.tftest.hcl -verbose 2>&1 | head -500 || true
+          set -o pipefail
+          terraform test tests/outputs_validation.tftest.hcl -verbose 2>&1 | head -500
         timeout-minutes: 30
 
   #######################
@@ -318,8 +319,9 @@ jobs:
 
       - name: Run Test - ${{ matrix.example }}
         run: |
-          terraform test tests/${{ matrix.example }}.tftest.hcl -verbose 2>&1 | head -500 || true
-        timeout-minutes: 15
+          set -o pipefail
+          terraform test tests/${{ matrix.example }}.tftest.hcl -verbose 2>&1 | head -500
+        timeout-minutes: 20
 
   #######################
   # Status Check (Final Gate)
