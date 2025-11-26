@@ -32,6 +32,33 @@ This module deploys Keycloak on AWS using ECS Fargate with flexible database opt
 - AWS Provider ~> 5.0
 - Existing VPC with public and private subnets (see Network Prerequisites below)
 - (Optional) ACM certificate for HTTPS
+- **Python 3.x** (required when `enable_ses = true` for SMTP password derivation)
+
+### Python Requirement for SES
+
+When enabling SES email integration (`enable_ses = true`), Python 3.x must be available on the machine running Terraform. This is because AWS SES SMTP requires a derived password (not raw IAM credentials), and the module uses an external Python script to perform this derivation.
+
+**Using mise (recommended):**
+
+```bash
+# Python 3.11 is included in mise.toml
+mise install
+```
+
+**Manual installation:**
+
+```bash
+# macOS
+brew install python@3.11
+
+# Ubuntu/Debian
+sudo apt-get install python3
+
+# Verify installation
+python3 --version
+```
+
+If Python is not available and `enable_ses = true`, Terraform will fail during the plan phase with an error about the external data source.
 
 ### Network Prerequisites
 
@@ -528,61 +555,29 @@ After deployment, configure each Keycloak realm to use SES SMTP:
 
 1. **Get SMTP credentials**:
 
+   The module automatically derives the SMTP password from the IAM credentials (this is why Python 3.x is required during `terraform apply`). The derived credentials are stored in Secrets Manager:
+
    ```bash
-   # Get the SMTP secret
-   AWS secretsmanager get-secret-value \
-     --secret-id $(Terraform output -raw ses_smtp_credentials_secret_id) \
+   # Get the SMTP credentials (password is already derived and ready to use)
+   aws secretsmanager get-secret-value \
+     --secret-id $(terraform output -raw ses_smtp_credentials_secret_id) \
      --query SecretString --output text | jq .
    ```
 
-2. **Convert IAM secret to SMTP password**:
+   This returns:
 
-   The IAM secret key must be converted to an SMTP password. Use this Python script:
-
-   ```python
-   #!/usr/bin/env python3
-   import hmac
-   import hashlib
-   import base64
-   import sys
-
-   SMTP_REGIONS = [
-       "us-east-2", "us-east-1", "us-west-2", "ap-south-1",
-       "ap-northeast-2", "ap-southeast-1", "ap-southeast-2",
-       "ap-northeast-1", "ca-central-1", "eu-central-1",
-       "eu-west-1", "eu-west-2", "eu-west-3", "eu-north-1",
-       "sa-east-1", "us-gov-west-1", "us-gov-east-1"
-   ]
-
-   def sign(key, msg):
-       return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
-
-   def calculate_key(secret_access_key, region):
-       if region not in SMTP_REGIONS:
-           raise ValueError(f"Region {region} not supported for SES SMTP")
-
-       signature = sign(("AWS4" + secret_access_key).encode("utf-8"), "11111111")
-       signature = sign(signature, region)
-       signature = sign(signature, "ses")
-       signature = sign(signature, "aws4_request")
-       signature = sign(signature, "SendRawEmail")
-       signature_and_version = bytes([0x04]) + signature
-       return base64.b64encode(signature_and_version).decode("utf-8")
-
-   if __name__ == "__main__":
-       if len(sys.argv) != 3:
-           print(f"Usage: {sys.argv[0]} <secret_access_key> <region>")
-           sys.exit(1)
-       print(calculate_key(sys.argv[1], sys.argv[2]))
+   ```json
+   {
+     "smtp_host": "email-smtp.us-east-1.amazonaws.com",
+     "smtp_port": 587,
+     "smtp_username": "AKIA...",
+     "smtp_password": "BJ2k...",  // Already derived, ready to use
+     "from_email": "noreply@example.com",
+     "region": "us-east-1"
+   }
    ```
 
-   Run it:
-
-   ```bash
-   python3 smtp_password.py <iam_secret_key> <region>
-   ```
-
-3. **Configure SMTP in Keycloak**:
+2. **Configure SMTP in Keycloak**:
 
    In the Keycloak Admin Console:
    - Go to **Realm Settings** → **Email**
@@ -593,9 +588,9 @@ After deployment, configure each Keycloak realm to use SES SMTP:
      - **Enable StartTLS**: Yes
      - **Enable Authentication**: Yes
      - **Username**: The `smtp_username` from the secret
-     - **Password**: The converted SMTP password (from step 2)
+     - **Password**: The `smtp_password` from the secret (already derived)
 
-4. **Test email**:
+3. **Test email**:
    - Click "Test Connection" in Keycloak
    - Send a test email to verify configuration
 

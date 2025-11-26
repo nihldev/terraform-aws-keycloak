@@ -12,6 +12,9 @@ terraform-docs = "latest"
 # Code Quality
 pre-commit = "latest"
 
+# Python runtime (required for SES SMTP password derivation in keycloak module)
+python = "3.11"
+
 # Python linting and formatting
 ruff = "latest"
 "pipx:basedpyright" = "latest"

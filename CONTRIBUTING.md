@@ -34,6 +34,9 @@ This installs:
 - **Terraform-docs** - Documentation generator
 - **taplo** - TOML formatter and linter
 - **markdownlint-cli** - Markdown linter
+- **Python 3.11** - Required for SES SMTP password derivation and linting tools
+- **ruff** - Python linter and formatter
+- **basedpyright** - Python type checker
 
 **Important:** The `post_install` hook will automatically:
 

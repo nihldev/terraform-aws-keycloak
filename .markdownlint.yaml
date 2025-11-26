@@ -111,7 +111,9 @@ MD042: true
 MD043: false
 
 # MD044 - Proper names should have the correct capitalization
+# Note: code_blocks: false ignores code blocks where lowercase is correct (e.g., `terraform apply`)
 MD044:
+  code_blocks: false
   names:
     - Terraform
     - AWS
