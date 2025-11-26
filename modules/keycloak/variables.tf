@@ -617,7 +617,9 @@ variable "keycloak_image" {
     - Docker Hub: "myorg/keycloak-custom:latest"
 
     If empty (default), uses the official Keycloak image from quay.io.
-    If create_ecr_repository = true and this is empty, uses the created ECR repo.
+
+    To use ECR: Set this to the ECR repository URL from the module output,
+    e.g., keycloak_image = module.keycloak.ecr_repository_url
   EOT
   type        = string
   default     = ""
@@ -631,7 +633,10 @@ variable "create_ecr_repository" {
     - Lifecycle policy to manage image retention
     - Repository URL output for pushing images
 
-    Use this when you want to build and store custom Keycloak images.
+    Note: This only creates the repository. To use it:
+    1. Apply to create the ECR repository
+    2. Build and push your custom image to the repository
+    3. Set keycloak_image to the ECR URL (available as ecr_repository_url output)
   EOT
   type        = bool
   default     = false

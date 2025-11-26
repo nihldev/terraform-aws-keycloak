@@ -105,19 +105,14 @@ resource "aws_ecr_repository_policy" "keycloak" {
 locals {
   # Determine the image to use:
   # 1. If keycloak_image is explicitly set, use it
-  # 2. If ECR repo is created and no image specified, use ECR repo URL
-  # 3. Default to official Keycloak image
+  # 2. Otherwise, use the official Keycloak image
+  #
+  # Note: ECR repository URL is available as an output. To use your custom
+  # image from ECR, set keycloak_image to "${ecr_repository_url}:your-tag"
 
   default_keycloak_image = "quay.io/keycloak/keycloak:${var.keycloak_version}"
 
   ecr_repository_url = var.create_ecr_repository ? aws_ecr_repository.keycloak[0].repository_url : ""
 
-  keycloak_image = (
-    var.keycloak_image != ""
-    ? var.keycloak_image
-    : (var.create_ecr_repository
-      ? "${local.ecr_repository_url}:${var.keycloak_version}"
-      : local.default_keycloak_image
-    )
-  )
+  keycloak_image = var.keycloak_image != "" ? var.keycloak_image : local.default_keycloak_image
 }
