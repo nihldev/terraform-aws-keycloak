@@ -202,7 +202,7 @@ resource "aws_ecs_task_definition" "keycloak" {
       healthCheck = {
         command = [
           "CMD-SHELL",
-          "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
+          "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET ${var.health_check_path} HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"
         ]
         interval    = 30
         timeout     = 5
