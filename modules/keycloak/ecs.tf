@@ -171,6 +171,34 @@ resource "aws_ecs_task_definition" "keycloak" {
       environment = local.environment
       secrets     = local.secrets
 
+      # Health Check Architecture:
+      # -------------------------
+      # Three health check mechanisms work together:
+      #
+      # 1. Container Health Check (this block):
+      #    - Used by ECS to monitor container health
+      #    - startPeriod: 60s grace before checks count (Keycloak startup time)
+      #    - interval: 30s, timeout: 5s, retries: 3
+      #    - If unhealthy, ECS stops and replaces the task
+      #
+      # 2. ALB Target Group Health Check (networking.tf):
+      #    - Used by ALB to route traffic to healthy targets
+      #    - interval: 30s, timeout: 5s
+      #    - healthy_threshold: 2, unhealthy_threshold: 3
+      #    - Path: var.health_check_path (default: /health/ready)
+      #
+      # 3. ECS Service Grace Period (var.health_check_grace_period_seconds):
+      #    - Default: 600s (10 minutes)
+      #    - Time before ECS considers ALB health check failures
+      #    - Allows Keycloak to fully initialize (DB migrations, cache warmup)
+      #
+      # Timeline for new deployment:
+      #   0s-60s:   Container starting (startPeriod, checks don't count)
+      #   60s-90s:  Container health checks begin
+      #   ~90s:     ALB starts receiving healthy responses
+      #   ~120s:    ALB marks target healthy (2 consecutive checks)
+      #   0s-600s:  ECS ignores ALB failures (grace period)
+      #
       healthCheck = {
         command = [
           "CMD-SHELL",
