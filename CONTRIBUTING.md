@@ -439,7 +439,7 @@ This repository uses comprehensive automated checks to catch issues before code 
 ### What Gets Checked Automatically
 
 | Check | What It Catches | Auto-Fix | Tool |
-|-------|----------------|----------|------|
+| ----- | --------------- | -------- | ---- |
 | **Terraform Format** | Inconsistent code formatting | ✅ Yes | Terraform fmt |
 | **Terraform Validate** | Syntax errors, invalid references | ❌ No | Terraform validate |
 | **TFLint** | Deprecated resources, naming violations, undocumented variables | ❌ No | tflint |
@@ -500,7 +500,7 @@ This ensures users have examples for all configuration options.
 Some issues require human judgment and code review:
 
 | Issue | Why Manual Review Needed |
-|-------|--------------------------|
+| ----- | ------------------------ |
 | Keycloak startup mode | Requires understanding of deployment lifecycle and database initialization |
 | Performance tuning | Workload-specific decisions (connection pools, task sizing) |
 | Architecture trade-offs | Context-dependent (JDBC_PING vs AWS_PING, cache strategies) |

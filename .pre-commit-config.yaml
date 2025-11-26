@@ -8,6 +8,7 @@ repos:
         name: Terraform fmt
         description: Rewrites all Terraform configuration files to canonical format
         stages: [pre-commit]
+        files: \.(tf|tftest\.hcl)$
 
       # Validate Terraform files (pre-push only - comprehensive check)
       - id: terraform_validate

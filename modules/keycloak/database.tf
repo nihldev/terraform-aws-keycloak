@@ -95,21 +95,10 @@ resource "aws_security_group_rule" "rds_ingress_from_ecs" {
   description              = "Allow PostgreSQL access from ECS tasks"
 }
 
-# Database egress rule for stateful connection handling
-# Note: This egress rule is technically not required for databases as stateful security groups
-# automatically allow response traffic. However, it's kept for explicit clarity and
-# to prevent potential issues with connection tracking edge cases.
-# Databases never initiate outbound connections in this configuration.
-#tfsec:ignore:aws-ec2-no-public-egress-sgr
-resource "aws_security_group_rule" "rds_egress" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.rds.id
-  description       = "Allow responses to established connections (stateful)"
-}
+# Note: No egress rule needed for database security group.
+# AWS security groups are stateful - response traffic to allowed inbound
+# connections is automatically permitted. The database never initiates
+# outbound connections in this configuration.
 
 #######################
 # RDS Instance (Standard PostgreSQL)

@@ -37,8 +37,8 @@ run "validate_monitoring_options" {
     environment = "test"
 
     # Test monitoring configurations
-    enable_container_insights      = false
-    cloudwatch_log_retention_days  = 14
+    enable_container_insights         = false
+    cloudwatch_log_retention_days     = 14
     health_check_grace_period_seconds = 300
   }
 
@@ -60,10 +60,10 @@ run "validate_security_options" {
     environment = "test"
 
     # Test security configurations
-    db_deletion_protection                   = false
-    db_skip_final_snapshot                   = true
-    db_iam_database_authentication_enabled   = true
-    alb_deletion_protection                  = false
+    db_deletion_protection                 = false
+    db_skip_final_snapshot                 = true
+    db_iam_database_authentication_enabled = true
+    alb_deletion_protection                = false
   }
 
   module {
@@ -137,10 +137,10 @@ run "validate_database_maintenance" {
     environment = "test"
 
     # Test database maintenance windows
-    db_backup_window                             = "02:00-03:00"
-    db_maintenance_window                        = "mon:03:00-mon:04:00"
-    db_engine_version                            = "16.3"
-    db_performance_insights_retention_period     = 14
+    db_backup_window                         = "02:00-03:00"
+    db_maintenance_window                    = "mon:03:00-mon:04:00"
+    db_engine_version                        = "16.3"
+    db_performance_insights_retention_period = 14
   }
 
   module {

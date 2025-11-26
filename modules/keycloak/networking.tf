@@ -42,19 +42,16 @@ resource "aws_security_group_rule" "alb_ingress_https" {
   description       = "Allow HTTPS inbound traffic"
 }
 
-# Allow all outbound traffic for ALB to reach ECS tasks
-# Note: ALB needs to communicate with ECS tasks on dynamic ports and handle health checks
-# Egress is allowed to all destinations as ALB only forwards to internal ECS tasks
-# The actual traffic is controlled by the target group and ECS security group ingress rules
-#tfsec:ignore:aws-ec2-no-public-egress-sgr
-resource "aws_security_group_rule" "alb_egress" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.alb.id
-  description       = "Allow all outbound traffic to reach ECS tasks"
+# Allow ALB to forward traffic to ECS tasks on Keycloak port
+# Restricted to ECS security group for least-privilege security
+resource "aws_security_group_rule" "alb_egress_to_ecs" {
+  type                     = "egress"
+  from_port                = 8080
+  to_port                  = 8080
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecs_tasks.id
+  security_group_id        = aws_security_group.alb.id
+  description              = "Allow traffic to ECS tasks on Keycloak port"
 }
 
 #######################

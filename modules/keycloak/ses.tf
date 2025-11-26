@@ -123,24 +123,41 @@ resource "aws_iam_access_key" "ses_smtp" {
 
 #######################
 # SMTP Password Derivation
-# SES SMTP password is derived from IAM secret key
-# Using algorithm from: https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html
+#
+# AWS SES SMTP does NOT accept raw IAM credentials. The SMTP password must be
+# derived from the IAM secret key using AWS's algorithm. This module automatically
+# derives the password using an external Python script.
+#
+# See: https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html
+#
+# Requirements: Python 3.x must be available on the machine running Terraform.
 #######################
+
+data "external" "ses_smtp_password" {
+  count   = var.enable_ses ? 1 : 0
+  program = ["python3", "${path.module}/../../scripts/derive-ses-smtp-password.py"]
+
+  query = {
+    secret_key = aws_iam_access_key.ses_smtp[0].secret
+    region     = data.aws_region.current.name
+  }
+}
 
 locals {
   # SES SMTP endpoint for the current region
   ses_smtp_endpoint = var.enable_ses ? "email-smtp.${data.aws_region.current.name}.amazonaws.com" : ""
+
+  # Derived SMTP password (automatically computed from IAM secret key)
+  ses_smtp_password = var.enable_ses ? data.external.ses_smtp_password[0].result.smtp_password : ""
 
   # SMTP credentials storage
   ses_smtp_credentials = var.enable_ses ? {
     smtp_host     = local.ses_smtp_endpoint
     smtp_port     = 587
     smtp_username = aws_iam_access_key.ses_smtp[0].id
-    # Note: SMTP password must be derived from IAM secret key
-    # Store the IAM secret key; user must convert to SMTP password
-    iam_secret_key = aws_iam_access_key.ses_smtp[0].secret
-    from_email     = var.ses_from_email != "" ? var.ses_from_email : "noreply@${var.ses_domain}"
-    region         = data.aws_region.current.name
+    smtp_password = local.ses_smtp_password
+    from_email    = var.ses_from_email != "" ? var.ses_from_email : "noreply@${var.ses_domain}"
+    region        = data.aws_region.current.name
   } : {}
 }
 
@@ -168,14 +185,12 @@ resource "aws_secretsmanager_secret_version" "ses_smtp" {
   count     = var.enable_ses ? 1 : 0
   secret_id = aws_secretsmanager_secret.ses_smtp[0].id
   secret_string = jsonencode({
-    smtp_host      = local.ses_smtp_credentials.smtp_host
-    smtp_port      = local.ses_smtp_credentials.smtp_port
-    smtp_username  = local.ses_smtp_credentials.smtp_username
-    iam_secret_key = local.ses_smtp_credentials.iam_secret_key
-    from_email     = local.ses_smtp_credentials.from_email
-    region         = local.ses_smtp_credentials.region
-    # Instructions for SMTP password
-    note = "The SMTP password must be derived from iam_secret_key. See module documentation."
+    smtp_host     = local.ses_smtp_credentials.smtp_host
+    smtp_port     = local.ses_smtp_credentials.smtp_port
+    smtp_username = local.ses_smtp_credentials.smtp_username
+    smtp_password = local.ses_smtp_credentials.smtp_password
+    from_email    = local.ses_smtp_credentials.from_email
+    region        = local.ses_smtp_credentials.region
   })
 }
 
