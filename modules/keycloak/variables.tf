@@ -222,6 +222,12 @@ variable "health_check_grace_period_seconds" {
   default     = 600
 }
 
+variable "health_check_path" {
+  description = "Health check path for ALB target group. Default is Keycloak's standard health endpoint."
+  type        = string
+  default     = "/health/ready"
+}
+
 variable "autoscaling_max_capacity" {
   description = "Maximum number of tasks for autoscaling (defaults to desired_count * 3 if not set)"
   type        = number

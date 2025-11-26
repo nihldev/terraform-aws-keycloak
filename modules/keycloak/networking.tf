@@ -166,7 +166,7 @@ resource "aws_lb_target_group" "keycloak" {
     unhealthy_threshold = 3
     timeout             = 5
     interval            = 30
-    path                = "/health/ready"
+    path                = var.health_check_path
     protocol            = "HTTP"
     matcher             = "200"
   }
