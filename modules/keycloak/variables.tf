@@ -158,7 +158,16 @@ variable "waf_acl_arn" {
 #######################
 
 variable "multi_az" {
-  description = "Enable multi-AZ deployment for high availability"
+  description = <<-EOT
+    Enable multi-AZ deployment for high availability.
+
+    Behavior by database type:
+    - RDS: Creates a synchronous standby replica in another AZ (true Multi-AZ)
+    - Aurora: Sets default for aurora_replica_count to 1 (creates a reader instance)
+              Note: Aurora storage is ALWAYS replicated across 3 AZs regardless of this setting.
+
+    For Aurora, prefer using 'aurora_replica_count' directly for explicit control.
+  EOT
   type        = bool
   default     = false
 }
@@ -309,13 +318,16 @@ variable "db_capacity_max" {
 variable "aurora_replica_count" {
   description = <<-EOT
     Number of Aurora read replicas (0-15).
-    Only applies when database_type = "aurora".
+    Applies to both database_type = "aurora" and "aurora-serverless".
 
     If null (default), automatically creates:
     - 1 replica when multi_az = true
     - 0 replicas when multi_az = false
 
     Set explicitly to override automatic behavior.
+
+    Note: Aurora storage is always replicated across 3 AZs. Reader instances
+    provide read scaling and faster failover, not storage redundancy.
   EOT
   type        = number
   default     = null

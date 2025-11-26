@@ -54,6 +54,25 @@ check "aurora_cost_warning" {
   }
 }
 
+check "multi_az_aurora_guidance" {
+  assert {
+    condition = !(
+      var.multi_az == true &&
+      contains(["aurora", "aurora-serverless"], var.database_type) &&
+      var.aurora_replica_count == null
+    )
+    error_message = <<-EOT
+      NOTE: For Aurora, 'multi_az' provides a smart default for read replicas.
+      Aurora storage is always replicated across 3 AZs automatically.
+
+      For explicit control over Aurora HA, use 'aurora_replica_count' instead:
+        aurora_replica_count = 1  # Creates 1 reader instance
+
+      Current behavior: multi_az=true creates 1 reader instance by default.
+    EOT
+  }
+}
+
 resource "random_password" "keycloak_admin_password" {
   length  = 32
   special = true
@@ -288,13 +307,14 @@ resource "aws_rds_cluster_instance" "keycloak_reader" {
 }
 
 #######################
-# Aurora Serverless v2 Instance
+# Aurora Serverless v2 Instances
 #######################
 
-resource "aws_rds_cluster_instance" "keycloak_serverless" {
+# Writer instance
+resource "aws_rds_cluster_instance" "keycloak_serverless_writer" {
   count = var.database_type == "aurora-serverless" ? 1 : 0
 
-  identifier         = "${var.name}-keycloak-${var.environment}-serverless"
+  identifier         = "${var.name}-keycloak-${var.environment}-serverless-writer"
   cluster_identifier = aws_rds_cluster.keycloak[0].id
   instance_class     = "db.serverless"
   engine             = "aurora-postgresql"
@@ -310,9 +330,38 @@ resource "aws_rds_cluster_instance" "keycloak_serverless" {
   tags = merge(
     var.tags,
     {
-      Name         = "${var.name}-keycloak-${var.environment}-serverless"
+      Name         = "${var.name}-keycloak-${var.environment}-serverless-writer"
       Environment  = var.environment
       DatabaseType = "aurora-serverless"
+      Role         = "writer"
+    }
+  )
+}
+
+# Reader instances (count based on aurora_replica_count, same as Aurora Provisioned)
+resource "aws_rds_cluster_instance" "keycloak_serverless_reader" {
+  count = var.database_type == "aurora-serverless" ? local.aurora_replicas : 0
+
+  identifier         = "${var.name}-keycloak-${var.environment}-serverless-reader-${count.index + 1}"
+  cluster_identifier = aws_rds_cluster.keycloak[0].id
+  instance_class     = "db.serverless"
+  engine             = "aurora-postgresql"
+
+  # Performance Insights
+  performance_insights_enabled          = true
+  performance_insights_kms_key_id       = var.db_kms_key_id != "" ? var.db_kms_key_id : null
+  performance_insights_retention_period = local.pi_retention
+
+  # Auto minor version upgrades
+  auto_minor_version_upgrade = true
+
+  tags = merge(
+    var.tags,
+    {
+      Name         = "${var.name}-keycloak-${var.environment}-serverless-reader-${count.index + 1}"
+      Environment  = var.environment
+      DatabaseType = "aurora-serverless"
+      Role         = "reader"
     }
   )
 }
