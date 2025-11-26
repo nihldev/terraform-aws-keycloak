@@ -31,6 +31,9 @@ resource "aws_cloudwatch_metric_alarm" "ecs_high_cpu" {
   threshold           = 80
   alarm_description   = "Keycloak ECS CPU utilization is above 80%"
 
+  alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+
   dimensions = {
     ClusterName = aws_ecs_cluster.keycloak.name
     ServiceName = aws_ecs_service.keycloak.name
@@ -57,6 +60,9 @@ resource "aws_cloudwatch_metric_alarm" "ecs_high_memory" {
   threshold           = 80
   alarm_description   = "Keycloak ECS memory utilization is above 80%"
 
+  alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+
   dimensions = {
     ClusterName = aws_ecs_cluster.keycloak.name
     ServiceName = aws_ecs_service.keycloak.name
@@ -82,6 +88,9 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_targets" {
   statistic           = "Average"
   threshold           = 0
   alarm_description   = "Keycloak has unhealthy targets"
+
+  alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
 
   dimensions = {
     LoadBalancer = aws_lb.keycloak.arn_suffix
@@ -111,6 +120,9 @@ resource "aws_cloudwatch_metric_alarm" "rds_high_cpu" {
   threshold           = 80
   alarm_description   = "Keycloak RDS CPU utilization is above 80%"
 
+  alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+
   dimensions = {
     DBInstanceIdentifier = aws_db_instance.keycloak[0].id
   }
@@ -138,6 +150,9 @@ resource "aws_cloudwatch_metric_alarm" "rds_low_storage" {
   threshold           = 5368709120 # 5 GB in bytes
   alarm_description   = "Keycloak RDS free storage space is below 5 GB"
 
+  alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+
   dimensions = {
     DBInstanceIdentifier = aws_db_instance.keycloak[0].id
   }
@@ -164,6 +179,9 @@ resource "aws_cloudwatch_metric_alarm" "aurora_high_cpu" {
   statistic           = "Average"
   threshold           = 80
   alarm_description   = "Keycloak Aurora cluster CPU utilization is above 80%"
+
+  alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
 
   dimensions = {
     DBClusterIdentifier = aws_rds_cluster.keycloak[0].id

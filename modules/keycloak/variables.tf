@@ -210,6 +210,12 @@ variable "cloudwatch_log_retention_days" {
   }
 }
 
+variable "alarm_sns_topic_arn" {
+  description = "SNS topic ARN for CloudWatch alarm notifications. If not provided, alarms will not send notifications."
+  type        = string
+  default     = ""
+}
+
 variable "health_check_grace_period_seconds" {
   description = "Health check grace period for ECS service (600 recommended for initial deployments)"
   type        = number
