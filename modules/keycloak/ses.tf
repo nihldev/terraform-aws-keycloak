@@ -2,6 +2,28 @@
 # SES Email Integration
 # Optional: Enable with enable_ses = true
 #######################
+#
+# IMPORTANT: Python 3 Requirement
+# ===============================
+# When enable_ses = true, this module requires Python 3 to be installed and
+# available as 'python3' in your PATH. This is needed to derive the SES SMTP
+# password from IAM credentials using AWS's signing algorithm.
+#
+# The SMTP password derivation is performed by:
+#   scripts/derive-ses-smtp-password.py
+#
+# If Python 3 is not available, you will see an error like:
+#   "Error: Failed to execute program: python3"
+#
+# To install Python 3:
+#   - macOS:   brew install python3
+#   - Ubuntu:  sudo apt-get install python3
+#   - Amazon Linux: sudo yum install python3
+#
+# Alternatively, if using mise (recommended):
+#   mise install python@3.11
+#
+#######################
 
 #######################
 # SES Domain Identity
