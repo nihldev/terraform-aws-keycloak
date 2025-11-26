@@ -1,0 +1,33 @@
+# Trivy ignore file for Terraform security scanning
+# Migrated from tfsec (now deprecated)
+
+# VPC flow logs are enabled at the module level, but Trivy scans the internal VPC resource
+# in the external terraform-aws-modules/vpc/aws module
+AVD-AWS-0178
+
+# CloudWatch log encryption with KMS is optional (user can provide kms_key_id via variable)
+# Default AWS managed encryption is sufficient for most use cases
+AVD-AWS-0017
+
+# IAM database authentication is optional (user can enable via variable)
+# Default password authentication with Secrets Manager is secure for most use cases
+AVD-AWS-0176
+
+# Load balancer is intentionally public - Keycloak is a user-facing identity provider
+# This was previously ignored via tfsec:ignore:aws-elb-alb-not-public inline comment
+AVD-AWS-0053
+
+# Deletion protection is configurable via variable and enabled by default in prod
+# The local.deletion_protection value handles environment-aware defaults
+AVD-AWS-0177
+
+# Aurora cluster deletion protection - same as above, applies to Aurora clusters
+AVD-AWS-0343
+
+# Secrets Manager KMS encryption is optional (user can provide secrets_kms_key_id via variable)
+# Default AWS managed encryption is sufficient for most use cases
+AVD-AWS-0098
+
+# SES SMTP user has direct IAM policy - this is intentional for service accounts
+# Using groups would add complexity without security benefit for single-purpose service users
+AVD-AWS-0143

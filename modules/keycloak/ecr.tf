@@ -112,8 +112,6 @@ locals {
 
   default_keycloak_image = "quay.io/keycloak/keycloak:${var.keycloak_version}"
 
-  ecr_repository_url = var.create_ecr_repository ? aws_ecr_repository.keycloak[0].repository_url : ""
-
   keycloak_image = var.keycloak_image != "" ? var.keycloak_image : local.default_keycloak_image
 }
 

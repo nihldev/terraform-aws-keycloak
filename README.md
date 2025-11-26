@@ -1,6 +1,6 @@
-# Infrastructure Modules
+# Terraform AWS Keycloak
 
-This repository contains reusable Terraform modules for deploying infrastructure on AWS. These modules are designed to be used with the [infra-live](../infra-live) repository.
+This repository contains a reusable Terraform module for deploying Keycloak on AWS.
 
 ## Available Modules
 
@@ -22,7 +22,7 @@ Deploy Keycloak identity and access management system on AWS with ECS Fargate, R
 
 ```hcl
 module "keycloak" {
-  source = "git::https://github.com/your-org/infra-modules.git//modules/keycloak?ref=v1.0.0"
+  source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=v1.0.0"
 
   name        = "myapp"
   environment = "prod"
@@ -43,7 +43,7 @@ Reference these modules in your `infra-live` repository:
 ```hcl
 # infra-live/prod/us-east-1/keycloak/terragrunt.hcl
 terraform {
-  source = "git::https://github.com/your-org/infra-modules.git//modules/keycloak?ref=v1.0.0"
+  source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=v1.0.0"
 }
 
 inputs = {
@@ -72,7 +72,7 @@ inputs = {
 
    ```bash
    git clone <repository-url>
-   cd infra-modules
+   cd terraform-aws-keycloak
    ```
 
 2. Install development tools with mise:
@@ -85,7 +85,7 @@ inputs = {
    - Terraform
    - pre-commit framework (for pre-push hooks)
    - tflint (Terraform linter)
-   - tfsec (security scanner)
+   - trivy (security scanner)
    - Terraform-docs (documentation generator)
    - taplo (TOML formatter and linter)
    - markdownlint-cli (Markdown linter)
@@ -103,7 +103,7 @@ The `post_install` hook automatically sets up pre-push hooks in your repository.
 Pre-push hooks run automatically when pushing to the remote repository and will:
 
 - Format and validate Terraform code
-- Run security checks with `tfsec`
+- Run security checks with `trivy`
 - Lint Terraform with `tflint`
 - Format and lint TOML files with `taplo`
 - Lint and fix Markdown files

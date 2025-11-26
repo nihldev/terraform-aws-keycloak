@@ -1,4 +1,4 @@
-# Contributing to Infrastructure Modules
+# Contributing to Terraform AWS Keycloak
 
 Thank you for contributing! This guide will help you get started with development.
 
@@ -14,7 +14,7 @@ Thank you for contributing! This guide will help you get started with developmen
 
 ```bash
 git clone <repository-url>
-cd infra-modules
+cd terraform-aws-keycloak
 ```
 
 ### 2. Install Tools with mise
@@ -30,7 +30,7 @@ This installs:
 - **Terraform** - Infrastructure as code
 - **pre-commit** - Git hook framework
 - **tflint** - Terraform linter
-- **tfsec** - Security scanner
+- **trivy** - Security scanner
 - **Terraform-docs** - Documentation generator
 - **taplo** - TOML formatter and linter
 - **markdownlint-cli** - Markdown linter
@@ -61,7 +61,7 @@ Pre-push hooks run automatically when you push to the remote repository and will
 
 - Format Terraform code (`terraform fmt`)
 - Validate Terraform syntax (`terraform validate`)
-- Run security checks (`tfsec`)
+- Run security checks (`trivy`)
 - Lint code (`tflint`)
 - Update documentation (`terraform-docs`)
 
@@ -387,10 +387,10 @@ terraform validate
 
 All code is automatically scanned with multiple tools on push:
 
-**tfsec** - Security scanner (minimum severity: LOW)
+**Trivy** - Security scanner (all severities)
 
 ```bash
-tfsec . --minimum-severity=LOW
+trivy config --severity LOW,MEDIUM,HIGH,CRITICAL .
 ```
 
 **Conftest/OPA** - Custom policy validation
@@ -446,7 +446,7 @@ This repository uses comprehensive automated checks to catch issues before code 
 | **Terraform Format** | Inconsistent code formatting | ✅ Yes | terraform fmt |
 | **Terraform Validate** | Syntax errors, invalid references | ❌ No | terraform validate |
 | **TFLint** | Deprecated resources, naming violations, undocumented variables | ❌ No | tflint |
-| **TFSec** | Security issues, missing encryption, public resources | ❌ No | tfsec |
+| **Trivy** | Security issues, missing encryption, public resources | ❌ No | trivy |
 | **OPA Policies** | Keycloak-specific config issues | ❌ No | conftest |
 | **tfvars Coverage** | Missing variable examples | ❌ No | custom script |
 | **Markdown Lint** | Markdown formatting issues | ✅ Yes | markdownlint |
@@ -514,14 +514,16 @@ Some issues require human judgment and code review:
 
 If a check incorrectly flags valid code, document why it's safe and suppress:
 
-**TFSec:**
+**Trivy:**
 
 ```hcl
-#tfsec:ignore:AWS-xxx-check-id
+#trivy:ignore:AVD-AWS-xxxx
 resource "aws_xxx" "example" {
   # Reason: Explain why this is intentional/safe
 }
 ```
+
+Note: Legacy `#tfsec:ignore` comments are also supported by Trivy.
 
 **TFLint:**
 

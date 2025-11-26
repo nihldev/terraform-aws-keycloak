@@ -6,7 +6,7 @@ experimental = true
 # Infrastructure as Code
 terraform      = "1.14.0"
 tflint         = "latest"
-tfsec          = "latest"
+trivy          = "latest"
 terraform-docs = "latest"
 
 # Code Quality

@@ -36,14 +36,14 @@ repos:
         args:
           - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
 
-      # Security scanning with tfsec (pre-push only - comprehensive security)
-      - id: terraform_tfsec
-        name: TFSec
-        description: Security scanner with enhanced policies
+      # Security scanning with Trivy (pre-push only - comprehensive security)
+      - id: terraform_trivy
+        name: Trivy
+        description: Security scanner for Terraform
         stages: [pre-push]
         args:
-          - --args=--minimum-severity=LOW
-          - --args=--config-file=__GIT_WORKING_DIR__/.tfsec.yml
+          - --args=--severity=LOW,MEDIUM,HIGH,CRITICAL
+          - --args=--ignorefile=__GIT_WORKING_DIR__/.trivyignore
 
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
