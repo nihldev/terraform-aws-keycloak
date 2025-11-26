@@ -41,6 +41,19 @@ locals {
   )
 }
 
+#######################
+# Cost Warning Check
+# Surfaces warning during plan when Aurora is used in non-prod
+# Requires Terraform >= 1.5.0 (check blocks)
+#######################
+
+check "aurora_cost_warning" {
+  assert {
+    condition     = var.database_type == "rds" || var.environment == "prod"
+    error_message = "COST WARNING: Aurora (${var.database_type}) costs ~2x standard RDS. Consider database_type='rds' for ${var.environment} environment to reduce costs."
+  }
+}
+
 resource "random_password" "keycloak_admin_password" {
   length  = 32
   special = true
