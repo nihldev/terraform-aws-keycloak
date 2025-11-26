@@ -116,3 +116,31 @@ locals {
 
   keycloak_image = var.keycloak_image != "" ? var.keycloak_image : local.default_keycloak_image
 }
+
+#######################
+# ECR Usage Warning
+# Surfaces guidance during plan when ECR is created but not used
+#######################
+
+check "ecr_repository_usage" {
+  assert {
+    condition     = !(var.create_ecr_repository && var.keycloak_image == "")
+    error_message = <<-EOT
+      NOTE: ECR repository is being created but keycloak_image is not set.
+
+      The deployment will use the official Keycloak image from quay.io.
+      To use your custom image from ECR:
+
+      1. First apply to create the ECR repository
+      2. Build and push your custom image:
+         aws ecr get-login-password | docker login --username AWS --password-stdin <ecr_repository_url>
+         docker build -t <ecr_repository_url>:v1.0.0 .
+         docker push <ecr_repository_url>:v1.0.0
+
+      3. Set keycloak_image to use your ECR image:
+         keycloak_image = "<ecr_repository_url>:v1.0.0"
+
+      If this is intentional (creating ECR for future use), you can ignore this message.
+    EOT
+  }
+}

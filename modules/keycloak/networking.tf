@@ -175,6 +175,16 @@ resource "aws_lb_target_group" "keycloak" {
     matcher             = "200"
   }
 
+  # Deregistration delay: time to wait before removing target from ALB
+  # Default 30s is suitable for most deployments since:
+  # - Keycloak sessions are stored in the database (not in-memory)
+  # - Distributed cache (jdbc-ping) handles session replication
+  # - Active requests are given time to complete
+  #
+  # Consider increasing for production if:
+  # - Using sticky sessions (ALB stickiness enabled)
+  # - Long-running admin operations are common
+  # - Custom session timeout > 30s
   deregistration_delay = 30
 
   tags = merge(

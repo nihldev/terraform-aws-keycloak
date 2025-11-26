@@ -431,9 +431,9 @@ variable "db_maintenance_window" {
 }
 
 variable "db_deletion_protection" {
-  description = "Enable deletion protection for RDS"
+  description = "Enable deletion protection for database (defaults to true for prod environment)"
   type        = bool
-  default     = true
+  default     = null
 }
 
 variable "db_skip_final_snapshot" {

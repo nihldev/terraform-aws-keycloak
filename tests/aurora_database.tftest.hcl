@@ -91,6 +91,28 @@ run "aurora_serverless_custom_capacity" {
     ]) >= 1
     error_message = "Should create Aurora cluster instance"
   }
+
+  # Verify serverless scaling configuration has correct min capacity
+  assert {
+    condition = alltrue([
+      for r in terraform_plan.resource_changes : (
+        r.change.after.serverlessv2_scaling_configuration[0].min_capacity == 1
+      )
+      if r.type == "aws_rds_cluster" && r.change.actions[0] == "create"
+    ])
+    error_message = "Aurora cluster should have min_capacity of 1 ACU"
+  }
+
+  # Verify serverless scaling configuration has correct max capacity
+  assert {
+    condition = alltrue([
+      for r in terraform_plan.resource_changes : (
+        r.change.after.serverlessv2_scaling_configuration[0].max_capacity == 4
+      )
+      if r.type == "aws_rds_cluster" && r.change.actions[0] == "create"
+    ])
+    error_message = "Aurora cluster should have max_capacity of 4 ACUs"
+  }
 }
 
 run "aurora_serverless_ha_config" {

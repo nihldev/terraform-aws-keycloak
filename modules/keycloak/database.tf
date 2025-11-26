@@ -39,6 +39,13 @@ locals {
     : (local.is_aurora && var.environment == "prod" ? 31 : 7)
   )
 
+  # Smart default for deletion protection (enabled in prod)
+  deletion_protection = (
+    var.db_deletion_protection != null
+    ? var.db_deletion_protection
+    : (var.environment == "prod")
+  )
+
   # Cost warning for Aurora in non-prod
   cost_warning = (
     !local.is_rds && var.environment != "prod"
@@ -277,7 +284,7 @@ resource "aws_db_instance" "keycloak" {
   backup_window           = var.db_backup_window
   maintenance_window      = var.db_maintenance_window
 
-  deletion_protection       = var.db_deletion_protection
+  deletion_protection       = local.deletion_protection
   skip_final_snapshot       = var.db_skip_final_snapshot
   final_snapshot_identifier = var.db_skip_final_snapshot ? null : "${var.name}-keycloak-${var.environment}-final"
 
@@ -342,7 +349,7 @@ resource "aws_rds_cluster" "keycloak" {
   }
 
   # Deletion protection
-  deletion_protection       = var.db_deletion_protection
+  deletion_protection       = local.deletion_protection
   skip_final_snapshot       = var.db_skip_final_snapshot
   final_snapshot_identifier = var.db_skip_final_snapshot ? null : "${var.name}-keycloak-${var.environment}-final"
 
