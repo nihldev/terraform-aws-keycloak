@@ -19,7 +19,7 @@ cd infra-modules
 
 ### 2. Install Tools with mise
 
-mise will automatically install all required tools defined in `mise.TOML`:
+mise will automatically install all required tools defined in `mise.toml`:
 
 ```bash
 mise install
@@ -59,15 +59,15 @@ Pre-push hooks run automatically when you push to the remote repository and will
 
 **Terraform:**
 
-- Format Terraform code (`Terraform fmt`)
-- Validate Terraform syntax (`Terraform validate`)
+- Format Terraform code (`terraform fmt`)
+- Validate Terraform syntax (`terraform validate`)
 - Run security checks (`tfsec`)
 - Lint code (`tflint`)
-- Update documentation (`Terraform-docs`)
+- Update documentation (`terraform-docs`)
 
 **TOML:**
 
-- Validate TOML syntax (`check-TOML`)
+- Validate TOML syntax (`check-toml`)
 - Format TOML files (`taplo format`)
 - Lint TOML files (`taplo lint`)
 
@@ -100,7 +100,7 @@ mise run check
 mise run fmt
 
 # Format all TOML files
-mise run fmt-TOML
+mise run fmt-toml
 
 # Format all Markdown files
 mise run fmt-md
@@ -109,7 +109,7 @@ mise run fmt-md
 mise run fmt-all
 
 # Lint TOML files
-mise run lint-TOML
+mise run lint-toml
 
 # Lint Markdown files
 mise run lint-md
@@ -164,7 +164,7 @@ git push --no-verify
 
 ### Terraform Style
 
-- Use `Terraform fmt` for formatting (enforced by pre-commit)
+- Use `terraform fmt` for formatting (enforced by pre-commit)
 - Follow [HashiCorp's style guide](https://developer.hashicorp.com/terraform/language/style)
 - Use meaningful variable and resource names
 - Add descriptions to all variables and outputs
@@ -176,14 +176,14 @@ modules/<module-name>/
 ├── versions.tf      # Provider requirements
 ├── variables.tf     # Input variables
 ├── outputs.tf       # Output values
-├── <resource>.tf    # Resource definitions (e.g., ECS.tf, RDS.tf)
+├── <resource>.tf    # Resource definitions (e.g., ecs.tf, rds.tf)
 └── README.md        # Module documentation
 ```
 
 ### Documentation
 
 - Every module must have a comprehensive README.md
-- Use `Terraform-docs` to generate input/output tables (done automatically)
+- Use `terraform-docs` to generate input/output tables (done automatically)
 - Include usage examples
 - Document prerequisites and requirements
 - Explain important design decisions
@@ -193,8 +193,8 @@ modules/<module-name>/
 **Resources:**
 
 ```hcl
-resource "aws_ecs_cluster" "Keycloak" {
-  name = "${var.name}-Keycloak-${var.environment}"
+resource "aws_ecs_cluster" "keycloak" {
+  name = "${var.name}-keycloak-${var.environment}"
 }
 ```
 
@@ -224,12 +224,12 @@ tags = merge(
 - Use comments to explain complex configurations
 - Keep arrays and inline tables readable
 
-**Example (mise.TOML):**
+**Example (mise.toml):**
 
 ```toml
 [tools]
 # Infrastructure as Code
-Terraform = "1.14.0"
+terraform = "1.14.0"
 tflint = "latest"
 
 # Code Quality
@@ -262,7 +262,7 @@ Brief description here.
 ## Usage
 
 bash
-Terraform init
+terraform init
 
 
 ### Configuration
@@ -284,27 +284,27 @@ Terraform init
 2. Create a test configuration:
 
    ```bash
-   cp Terraform.tfvars.example Terraform.tfvars
-   # Edit Terraform.tfvars with test values
+   cp terraform.tfvars.example terraform.tfvars
+   # Edit terraform.tfvars with test values
    ```
 
 3. Initialize and plan:
 
    ```bash
-   Terraform init
-   Terraform plan
+   terraform init
+   terraform plan
    ```
 
 4. (Optional) Apply to test in AWS:
 
    ```bash
-   Terraform apply
+   terraform apply
    ```
 
 5. Clean up:
 
    ```bash
-   Terraform destroy
+   terraform destroy
    ```
 
 ### Validation Tests
@@ -318,7 +318,7 @@ mise run validate
 This will:
 
 - Initialize each module
-- Run `Terraform validate`
+- Run `terraform validate`
 - Report any syntax or configuration errors
 
 ## Troubleshooting
@@ -371,7 +371,7 @@ Common issues:
 Run validation with verbose output:
 
 ```bash
-Terraform validate
+terraform validate
 ```
 
 ## Security
@@ -443,8 +443,8 @@ This repository uses comprehensive automated checks to catch issues before code 
 
 | Check | What It Catches | Auto-Fix | Tool |
 | ----- | --------------- | -------- | ---- |
-| **Terraform Format** | Inconsistent code formatting | ✅ Yes | Terraform fmt |
-| **Terraform Validate** | Syntax errors, invalid references | ❌ No | Terraform validate |
+| **Terraform Format** | Inconsistent code formatting | ✅ Yes | terraform fmt |
+| **Terraform Validate** | Syntax errors, invalid references | ❌ No | terraform validate |
 | **TFLint** | Deprecated resources, naming violations, undocumented variables | ❌ No | tflint |
 | **TFSec** | Security issues, missing encryption, public resources | ❌ No | tfsec |
 | **OPA Policies** | Keycloak-specific config issues | ❌ No | conftest |
@@ -457,7 +457,7 @@ This repository uses comprehensive automated checks to catch issues before code 
 
 This repository uses Open Policy Agent (OPA) policies via Conftest for application-specific validations that standard linters can't catch.
 
-**Location**: `policy/Keycloak.rego`
+**Location**: `policy/keycloak.rego`
 
 **What it checks**:
 
@@ -471,7 +471,7 @@ This repository uses Open Policy Agent (OPA) policies via Conftest for applicati
 **Run manually**:
 
 ```bash
-conftest test --policy policy/ modules/Keycloak/
+conftest test --policy policy/ modules/keycloak/
 ```
 
 **Writing custom policies**:

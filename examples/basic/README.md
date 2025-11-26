@@ -24,29 +24,29 @@ This example demonstrates a minimal Keycloak deployment suitable for development
 cd examples/basic
 
 # Initialize
-Terraform init
+terraform init
 
 # Plan
-Terraform plan
+terraform plan
 
 # Apply
-Terraform apply
+terraform apply
 
 # Get outputs
-Terraform output keycloak_url
-Terraform output admin_credentials_secret_id
+terraform output keycloak_url
+terraform output admin_credentials_secret_id
 ```
 
 ## Accessing Keycloak
 
 ```bash
 # Get Keycloak URL
-KEYCLOAK_URL=$(Terraform output -raw keycloak_url)
+KEYCLOAK_URL=$(terraform output -raw keycloak_url)
 echo "Keycloak: $KEYCLOAK_URL"
 
 # Get admin credentials
-SECRET_ID=$(Terraform output -raw admin_credentials_secret_id)
-AWS secretsmanager get-secret-value \
+SECRET_ID=$(terraform output -raw admin_credentials_secret_id)
+aws secretsmanager get-secret-value \
   --secret-id "$SECRET_ID" \
   --query SecretString \
   --output text | jq -r '"Username: \(.username)\nPassword: \(.password)"'
@@ -64,7 +64,7 @@ Approximately $50-70/month (us-east-1):
 ## Cleanup
 
 ```bash
-Terraform destroy
+terraform destroy
 ```
 
 ## Notes

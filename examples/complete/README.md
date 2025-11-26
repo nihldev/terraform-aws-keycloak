@@ -34,39 +34,39 @@ See dedicated examples for Aurora:
 1. Copy the example variables file:
 
    ```bash
-   cp Terraform.tfvars.example Terraform.tfvars
+   cp terraform.tfvars.example terraform.tfvars
    ```
 
-2. Edit `Terraform.tfvars` with your desired configuration
+2. Edit `terraform.tfvars` with your desired configuration
 
 3. Initialize Terraform:
 
    ```bash
-   Terraform init
+   terraform init
    ```
 
 4. Review the plan:
 
    ```bash
-   Terraform plan
+   terraform plan
    ```
 
 5. Apply the configuration:
 
    ```bash
-   Terraform apply
+   terraform apply
    ```
 
 6. Get the Keycloak URL:
 
    ```bash
-   Terraform output keycloak_url
+   terraform output keycloak_url
    ```
 
 7. Retrieve admin credentials:
 
    ```bash
-   Terraform output -raw get_admin_credentials_command | bash
+   terraform output -raw get_admin_credentials_command | bash
    ```
 
 ## Configuration Examples
@@ -167,14 +167,14 @@ After deployment completes (takes ~10-15 minutes):
 1. Get the URL:
 
    ```bash
-   Terraform output keycloak_url
+   terraform output keycloak_url
    ```
 
 2. Get admin credentials:
 
    ```bash
-   AWS secretsmanager get-secret-value \
-     --secret-id $(Terraform output -raw admin_credentials_secret_arn) \
+   aws secretsmanager get-secret-value \
+     --secret-id $(terraform output -raw admin_credentials_secret_arn) \
      --query SecretString --output text | jq -r '.'
    ```
 
@@ -203,14 +203,14 @@ After deployment completes (takes ~10-15 minutes):
 To destroy all resources:
 
 ```bash
-Terraform destroy
+terraform destroy
 ```
 
 **Note:** Ensure `db_skip_final_snapshot = true` if you want to avoid creating a final RDS snapshot.
 
 ## Customization
 
-You can customize the deployment by modifying variables in `Terraform.tfvars`:
+You can customize the deployment by modifying variables in `terraform.tfvars`:
 
 - Change instance sizes
 - Adjust scaling parameters
@@ -233,7 +233,7 @@ See `variables.tf` for all available options.
 - Check security group rules
 - Verify `allowed_cidr_blocks` includes your IP
 - Check ECS service events for task startup issues
-- Review CloudWatch logs: `AWS logs tail /ECS/myapp-Keycloak-dev --follow`
+- Review CloudWatch logs: `aws logs tail /ECS/myapp-Keycloak-dev --follow`
 
 ### High costs
 

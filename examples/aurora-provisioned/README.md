@@ -73,25 +73,25 @@ cd examples/aurora-provisioned
 vim variables.tf
 
 # Initialize
-Terraform init
+terraform init
 
 # Plan (review the resources that will be created)
-Terraform plan
+terraform plan
 
 # Deploy
-Terraform apply
+terraform apply
 
 # Access Keycloak (takes 15-20 minutes for initial deployment)
-Terraform output keycloak_url
-Terraform output keycloak_admin_console_url
+terraform output keycloak_url
+terraform output keycloak_admin_console_url
 
 # Get database endpoints
-Terraform output db_cluster_endpoint  # Writer endpoint
-Terraform output db_reader_endpoint   # Reader endpoint (for read-only queries)
+terraform output db_cluster_endpoint  # Writer endpoint
+terraform output db_reader_endpoint   # Reader endpoint (for read-only queries)
 
 # Get admin credentials
-AWS secretsmanager get-secret-value \
-  --secret-id $(Terraform output -raw admin_credentials_secret_id) \
+aws secretsmanager get-secret-value \
+  --secret-id $(terraform output -raw admin_credentials_secret_id) \
   --query SecretString --output text | jq .
 ```
 
@@ -158,12 +158,12 @@ Rewind your database to a previous point in time without restoring from backup:
 
 ```bash
 # Backtrack to 1 hour ago
-AWS RDS backtrack-db-cluster \
+aws rds backtrack-db-cluster \
   --db-cluster-identifier <cluster-id> \
   --backtrack-to "$(date -u -d '1 hour ago' --iso-8601=seconds)"
 
 # Check backtrack status
-AWS RDS describe-db-clusters \
+aws rds describe-db-clusters \
   --db-cluster-identifier <cluster-id> \
   --query 'DBClusters[0].BacktrackWindow'
 ```
@@ -178,7 +178,7 @@ Aurora provides faster failover than RDS:
 Monitor failover events:
 
 ```bash
-AWS RDS describe-events \
+aws rds describe-events \
   --source-type db-cluster \
   --source-identifier <cluster-id> \
   --duration 60
@@ -190,7 +190,7 @@ AWS RDS describe-events \
 
 ```bash
 # Monitor cluster CPU
-AWS cloudwatch get-metric-statistics \
+aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name CPUUtilization \
   --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -200,7 +200,7 @@ AWS cloudwatch get-metric-statistics \
   --statistics Average
 
 # Check reader lag
-AWS cloudwatch get-metric-statistics \
+aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name AuroraReplicaLag \
   --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -254,7 +254,7 @@ Access Performance Insights in the AWS Console to analyze:
 ## Cleanup
 
 ```bash
-Terraform destroy
+terraform destroy
 ```
 
 **Note**: Aurora clusters take 5-10 minutes to delete due to final snapshot creation.

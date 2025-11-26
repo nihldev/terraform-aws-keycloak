@@ -59,7 +59,7 @@ SMTP credentials are automatically stored in Secrets Manager with the derived
 SMTP password (not the raw IAM secret key). Retrieve them with:
 
 ```bash
-AWS secretsmanager get-secret-value \
+aws secretsmanager get-secret-value \
   --secret-id <ses_smtp_credentials_secret_id> \
   --query SecretString --output text | jq
 ```

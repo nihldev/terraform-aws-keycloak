@@ -26,19 +26,27 @@ We use **Terraform's native testing framework** (`.tftest.hcl` files). This prov
 
 ## Test Files
 
-### Basic Tests
+### Example Tests
 
 | Test File                        | Description                                       | Duration    | AWS Cost |
 | -------------------------------- | ------------------------------------------------- | ----------- | -------- |
 | `examples_basic.tftest.hcl`      | Minimal deployment (1 task, smallest instances)   | ~15-20 min  | ~$0.50   |
 | `examples_complete.tftest.hcl`   | Complete deployment (2 tasks, standard config)    | ~20-25 min  | ~$1.00   |
 
+### Feature Tests
+
+| Test File                          | Description                                                  | Type               |
+| ---------------------------------- | ------------------------------------------------------------ | ------------------ |
+| `aurora_database.tftest.hcl`       | Aurora Provisioned and Serverless database configurations    | Plan Only          |
+| `ses_email.tftest.hcl`             | SES email integration                                        | Plan Only          |
+
 ### Validation Tests
 
 | Test File                          | Description                                                  | Type               |
 | ---------------------------------- | ------------------------------------------------------------ | ------------------ |
 | `outputs_validation.tftest.hcl`    | Validates all outputs are present and formatted correctly    | Apply + Assertions |
-| `module_validation.tftest.hcl`     | Validates Terraform plan creates expected resources          | Plan Only          |
+| `module_validation.tftest.hcl`     | Validates terraform plan creates expected resources          | Plan Only          |
+| `variable_combinations.tftest.hcl` | Tests various variable combinations and edge cases           | Plan Only          |
 
 ## Running Tests
 
@@ -46,7 +54,7 @@ We use **Terraform's native testing framework** (`.tftest.hcl` files). This prov
 
 ```bash
 # From repository root
-Terraform test
+terraform test
 
 # Expected output:
 # examples_basic.tftest.hcl... pass
@@ -59,20 +67,20 @@ Terraform test
 
 ```bash
 # Run only basic example test
-Terraform test ./tests/examples_basic.tftest.hcl
+terraform test ./tests/examples_basic.tftest.hcl
 
 # Run with verbose output
-Terraform test -verbose ./tests/examples_basic.tftest.hcl
+terraform test -verbose ./tests/examples_basic.tftest.hcl
 
 # Run without cleanup (keep resources for inspection)
-Terraform test -no-cleanup ./tests/examples_basic.tftest.hcl
+terraform test -no-cleanup ./tests/examples_basic.tftest.hcl
 ```
 
 ### Run Quick Validation (Plan Only)
 
 ```bash
 # Only validates configuration, doesn't create resources
-Terraform test ./tests/module_validation.tftest.hcl
+terraform test ./tests/module_validation.tftest.hcl
 
 # Fast execution (~1-2 minutes)
 ```
@@ -81,7 +89,7 @@ Terraform test ./tests/module_validation.tftest.hcl
 
 Each test follows this pattern:
 
-1. **Initialize**: Terraform initializes the test module
+1. **Initialize**: terraform initializes the test module
 2. **Plan**: Creates execution plan
 3. **Apply**: Deploys resources to AWS (for `command = apply` tests)
 4. **Assert**: Validates outputs and conditions
@@ -165,18 +173,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-Terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.14.0"
 
       - name: Configure AWS Credentials
-        uses: AWS-actions/configure-AWS-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          AWS-region: us-east-1
+          aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_TEST_ROLE }}
 
       - name: Run Terraform Tests
-        run: Terraform test
+        run: terraform test
 ```
 
 ## Test Coverage
@@ -225,10 +233,10 @@ Our tests validate:
 
 ```bash
 # Verify NAT Gateway exists
-AWS ec2 describe-nat-gateways --filter "Name=state,Values=available"
+aws ec2 describe-nat-gateways --filter "Name=state,Values=available"
 
 # Check route tables
-AWS ec2 describe-route-tables
+aws ec2 describe-route-tables
 ```
 
 ### Test Times Out
@@ -257,7 +265,7 @@ db_pool_max_size = 10
 ```bash
 # Manually destroy test resources
 cd examples/basic  # or examples/complete
-Terraform destroy
+terraform destroy
 ```
 
 ## Cost Management
@@ -285,10 +293,10 @@ Terraform destroy
 
    ```bash
    # Check for running ECS tasks
-   AWS ECS list-tasks --cluster Keycloak-test-Keycloak-test
+   aws ecs list-tasks --cluster Keycloak-test-Keycloak-test
 
    # Check for RDS instances
-   AWS RDS describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier,DBInstanceStatus]'
+   aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier,DBInstanceStatus]'
    ```
 
 4. **Set AWS budgets** to alert on unexpected costs
@@ -329,7 +337,7 @@ EOF
 
 ```bash
 # Run your new test
-Terraform test ./tests/examples_my_new_feature.tftest.hcl -verbose
+terraform test ./tests/examples_my_new_feature.tftest.hcl -verbose
 
 # Verify cleanup
 AWS resourcegroupstaggingapi get-resources \
@@ -454,8 +462,8 @@ resource "aws_lb_listener" "https" {
 **How to verify real coverage:**
 
 1. **Read test files** - Check actual variable values and assertions
-2. **Run tests** - `Terraform test -verbose` shows what's created
-3. **Review plans** - `Terraform plan` in examples shows resources
+2. **Run tests** - `terraform test -verbose` shows what's created
+3. **Review plans** - `terraform plan` in examples shows resources
 4. **Manual testing** - Deploy to test AWS account for critical paths
 
 **Use coverage metrics for:**

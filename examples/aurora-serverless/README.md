@@ -101,19 +101,19 @@ cd examples/aurora-serverless
 vim variables.tf
 
 # Initialize
-Terraform init
+terraform init
 
 # Plan
-Terraform plan
+terraform plan
 
 # Deploy
-Terraform apply
+terraform apply
 
 # Monitor capacity scaling
-AWS cloudwatch get-metric-statistics \
+aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name ServerlessDatabaseCapacity \
-  --dimensions Name=DBClusterIdentifier,Value=$(Terraform output -raw db_cluster_endpoint | cut -d. -f1) \
+  --dimensions Name=DBClusterIdentifier,Value=$(terraform output -raw db_cluster_endpoint | cut -d. -f1) \
   --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
   --period 300 \
@@ -180,7 +180,7 @@ db_backup_retention_period = 30
 
 ```bash
 # Real-time capacity monitoring
-watch -n 30 'AWS cloudwatch get-metric-statistics \
+watch -n 30 'aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name ServerlessDatabaseCapacity \
   --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -228,7 +228,7 @@ Average: ~3-4 ACU = ~$220-290/month
 
    ```bash
    # Check average capacity over past week
-   AWS cloudwatch get-metric-statistics \
+   aws cloudwatch get-metric-statistics \
      --namespace AWS/RDS \
      --metric-name ServerlessDatabaseCapacity \
      --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -244,13 +244,13 @@ Average: ~3-4 ACU = ~$220-290/month
 
    ```bash
    # Stop cluster (manual, not automated)
-   AWS RDS stop-db-cluster --db-cluster-identifier <cluster-id>
+   aws rds stop-db-cluster --db-cluster-identifier <cluster-id>
    ```
 
 4. **Use CloudWatch alarms** for cost control:
 
    ```bash
-   AWS cloudwatch put-metric-alarm \
+   aws cloudwatch put-metric-alarm \
      --alarm-name aurora-capacity-high \
      --alarm-description "Alert when capacity exceeds threshold" \
      --metric-name ServerlessDatabaseCapacity \
@@ -297,7 +297,7 @@ Consider switching from Serverless to Provisioned if:
 
 ```bash
 # Create dashboard
-AWS cloudwatch put-dashboard \
+aws cloudwatch put-dashboard \
   --dashboard-name Keycloak-aurora-serverless \
   --dashboard-body file://dashboard.JSON
 ```
@@ -333,7 +333,7 @@ AWS cloudwatch put-dashboard \
 **Check current capacity**:
 
 ```bash
-AWS cloudwatch get-metric-statistics \
+aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name ServerlessDatabaseCapacity \
   --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -346,7 +346,7 @@ AWS cloudwatch get-metric-statistics \
 ## Cleanup
 
 ```bash
-Terraform destroy
+terraform destroy
 ```
 
 ## Next Steps

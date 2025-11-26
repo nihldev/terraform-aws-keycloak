@@ -58,7 +58,7 @@ sudo apt-get install python3
 python3 --version
 ```
 
-If Python is not available and `enable_ses = true`, Terraform will fail during the plan phase with an error about the external data source.
+If Python is not available and `enable_ses = true`, terraform will fail during the plan phase with an error about the external data source.
 
 ### Network Prerequisites
 
@@ -236,7 +236,7 @@ db_capacity_max = 4    # Maximum ACUs
 ### Basic Example (Development)
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "./modules/Keycloak"
 
   name        = "myapp"
@@ -261,7 +261,7 @@ module "Keycloak" {
 ### Production Example
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "./modules/Keycloak"
 
   name        = "myapp"
@@ -301,7 +301,7 @@ module "Keycloak" {
 ### Aurora Provisioned Example (High Availability)
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "./modules/Keycloak"
 
   name        = "myapp"
@@ -352,7 +352,7 @@ output "aurora_reader_endpoint" {
 ### Aurora Serverless v2 Example (Variable Workload)
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "./modules/Keycloak"
 
   name        = "myapp"
@@ -389,7 +389,7 @@ output "cost_warning" {
 ### Aurora Serverless v2 Example (Production with Auto-Scaling)
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "./modules/Keycloak"
 
   name        = "myapp"
@@ -463,7 +463,7 @@ resource "aws_acm_certificate_validation" "Keycloak" {
 }
 
 # Deploy Keycloak
-module "Keycloak" {
+module "keycloak" {
   source = "./modules/Keycloak"
 
   name        = "myapp"
@@ -506,7 +506,7 @@ This module optionally integrates with Amazon SES to enable Keycloak to send ema
 ### Enabling SES Integration
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "path/to/modules/Keycloak"
 
   # ... other configuration ...
@@ -541,7 +541,7 @@ If you don't provide `ses_route53_zone_id`, you must manually create DNS records
 
 ```bash
 # Get required DNS records after deployment
-Terraform output ses_dns_records_required
+terraform output ses_dns_records_required
 ```
 
 **Required records:**
@@ -630,10 +630,10 @@ If `ses_configuration_set_enabled = true`, CloudWatch metrics are available:
 
 ```bash
 # Check email delivery metrics
-AWS cloudwatch get-metric-statistics \
+aws cloudwatch get-metric-statistics \
   --namespace AWS/SES \
   --metric-name Send \
-  --dimensions Name=ConfigurationSetName,Value=$(Terraform output -raw ses_configuration_set_name) \
+  --dimensions Name=ConfigurationSetName,Value=$(terraform output -raw ses_configuration_set_name) \
   --start-time $(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%S) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
   --period 3600 \
@@ -657,20 +657,20 @@ Typical Keycloak usage (password resets, verifications) costs < $1/month for mos
 1. **Check SES sandbox status**:
 
    ```bash
-   AWS ses get-account-sending-enabled
+   aws ses get-account-sending-enabled
    ```
 
 2. **Verify domain is verified**:
 
    ```bash
-   AWS ses get-identity-verification-attributes \
-     --identities $(Terraform output -raw ses_domain)
+   aws ses get-identity-verification-attributes \
+     --identities $(terraform output -raw ses_domain)
    ```
 
 3. **Check sending quota**:
 
    ```bash
-   AWS ses get-send-quota
+   aws ses get-send-quota
    ```
 
 #### Emails going to spam
@@ -700,7 +700,7 @@ This module supports deploying custom Keycloak Docker images for scenarios requi
 If you already have a custom Keycloak image in any registry:
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "path/to/modules/Keycloak"
 
   # Use custom image from any registry
@@ -716,7 +716,7 @@ module "Keycloak" {
 Let the module create an ECR repository for you:
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "path/to/modules/Keycloak"
 
   # Module creates ECR repository
@@ -732,19 +732,19 @@ module "Keycloak" {
 After deployment, push your custom image:
 
 ```bash
-# Get push commands from Terraform output
-Terraform output ecr_push_commands
+# Get push commands from terraform output
+terraform output ecr_push_commands
 
 # Or manually:
 # 1. Authenticate
-AWS ecr get-login-password --region us-east-1 | \
-  docker login --username AWS --password-stdin $(Terraform output -raw ecr_repository_url)
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin $(terraform output -raw ecr_repository_url)
 
 # 2. Build your image
-docker build -t $(Terraform output -raw ecr_repository_url):v1.0.0 .
+docker build -t $(terraform output -raw ecr_repository_url):v1.0.0 .
 
 # 3. Push
-docker push $(Terraform output -raw ecr_repository_url):v1.0.0
+docker push $(terraform output -raw ecr_repository_url):v1.0.0
 
 # 4. Update Terraform to use the new tag
 # keycloak_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/myapp-Keycloak-prod:v1.0.0"
@@ -756,7 +756,7 @@ docker push $(Terraform output -raw ecr_repository_url):v1.0.0
 
 ```dockerfile
 # Custom Keycloak with themes and providers
-FROM quay.io/Keycloak/Keycloak:26.0 as builder
+FROM quay.io/keycloak/keycloak:26.0 as builder
 
 # Install custom theme
 COPY themes/my-theme /opt/Keycloak/themes/my-theme
@@ -768,7 +768,7 @@ COPY providers/*.jar /opt/Keycloak/providers/
 RUN /opt/Keycloak/bin/kc.sh build
 
 # Production image
-FROM quay.io/Keycloak/Keycloak:26.0
+FROM quay.io/keycloak/keycloak:26.0
 COPY --from=builder /opt/Keycloak/ /opt/Keycloak/
 
 ENTRYPOINT ["/opt/Keycloak/bin/kc.sh"]
@@ -777,7 +777,7 @@ ENTRYPOINT ["/opt/Keycloak/bin/kc.sh"]
 #### Example with Custom Theme Only
 
 ```dockerfile
-FROM quay.io/Keycloak/Keycloak:26.0
+FROM quay.io/keycloak/keycloak:26.0
 
 # Copy custom login theme
 COPY my-login-theme /opt/Keycloak/themes/my-login-theme
@@ -845,7 +845,7 @@ build-Keycloak:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:
     - apk add --no-cache AWS-cli
-    - AWS ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
   script:
     - docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$CI_COMMIT_SHA ./Keycloak
     - docker push $ECR_REGISTRY/$ECR_REPOSITORY:$CI_COMMIT_SHA
@@ -867,8 +867,8 @@ After pushing a new image:
 2. **Apply changes**:
 
    ```bash
-   Terraform plan  # Review changes
-   Terraform apply # Deploy new image
+   terraform plan  # Review changes
+   terraform apply # Deploy new image
    ```
 
 3. **ECS performs rolling update**:
@@ -882,7 +882,7 @@ After pushing a new image:
 For multi-account setups (e.g., shared ECR in central account):
 
 ```hcl
-module "Keycloak" {
+module "keycloak" {
   source = "path/to/modules/Keycloak"
 
   create_ecr_repository   = true
@@ -921,7 +921,7 @@ module "Keycloak" {
 1. **Check image exists**:
 
    ```bash
-   AWS ecr describe-images --repository-name $(Terraform output -raw ecr_repository_name)
+   aws ecr describe-images --repository-name $(terraform output -raw ecr_repository_name)
    ```
 
 2. **Verify ECS can pull from ECR**:
@@ -931,15 +931,15 @@ module "Keycloak" {
 3. **Test image locally**:
 
    ```bash
-   docker run -it --rm $(Terraform output -raw keycloak_image) start --help
+   docker run -it --rm $(terraform output -raw keycloak_image) start --help
    ```
 
 #### Image vulnerabilities found
 
 ```bash
 # Check scan results
-AWS ecr describe-image-scan-findings \
-  --repository-name $(Terraform output -raw ecr_repository_name) \
+aws ecr describe-image-scan-findings \
+  --repository-name $(terraform output -raw ecr_repository_name) \
   --image-id imageTag=latest
 ```
 
@@ -951,12 +951,12 @@ keycloak_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/myapp-Keycloak-prod:
 ```
 
 ```bash
-Terraform apply
+terraform apply
 ```
 
 ## Pre-Deployment Verification
 
-Before running `Terraform apply`, verify your infrastructure meets these requirements:
+Before running `terraform apply`, verify your infrastructure meets these requirements:
 
 ### 1. Verify NAT Gateway Configuration
 
@@ -964,7 +964,7 @@ Before running `Terraform apply`, verify your infrastructure meets these require
 
 ```bash
 # List NAT Gateways in your VPC
-AWS ec2 describe-nat-gateways \
+aws ec2 describe-nat-gateways \
   --filter "Name=vpc-id,Values=<YOUR_VPC_ID>" \
   --query 'NatGateways[*].[NatGatewayId,State,SubnetId]' \
   --output table
@@ -976,7 +976,7 @@ AWS ec2 describe-nat-gateways \
 
 ```bash
 # Check route tables for private subnets
-AWS ec2 describe-route-tables \
+aws ec2 describe-route-tables \
   --filters "Name=vpc-id,Values=<YOUR_VPC_ID>" \
   --query 'RouteTables[*].{RouteTableId:RouteTableId,Routes:Routes[?DestinationCidrBlock==`0.0.0.0/0`].{Dest:DestinationCidrBlock,Gateway:NatGatewayId}}' \
   --output table
@@ -994,7 +994,7 @@ AWS ec2 describe-route-tables \
 
 ```bash
 # Check subnet availability zones
-AWS ec2 describe-subnets \
+aws ec2 describe-subnets \
   --subnet-ids subnet-xxxxx subnet-yyyyy \
   --query 'Subnets[*].[SubnetId,AvailabilityZone,CidrBlock]' \
   --output table
@@ -1006,11 +1006,11 @@ AWS ec2 describe-subnets \
 
 ```bash
 # Check VPC DNS configuration
-AWS ec2 describe-vpc-attribute \
+aws ec2 describe-vpc-attribute \
   --vpc-id <YOUR_VPC_ID> \
   --attribute enableDnsHostnames
 
-AWS ec2 describe-vpc-attribute \
+aws ec2 describe-vpc-attribute \
   --vpc-id <YOUR_VPC_ID> \
   --attribute enableDnsSupport
 
@@ -1057,14 +1057,14 @@ After deployment:
 1. Get the Keycloak URL from outputs:
 
    ```bash
-   Terraform output keycloak_url
+   terraform output keycloak_url
    ```
 
 2. Get admin credentials from Secrets Manager:
 
    ```bash
-   AWS secretsmanager get-secret-value \
-     --secret-id $(Terraform output -raw admin_credentials_secret_arn) \
+   aws secretsmanager get-secret-value \
+     --secret-id $(terraform output -raw admin_credentials_secret_arn) \
      --query SecretString \
      --output text | jq -r '.username, .password'
    ```
@@ -1073,13 +1073,13 @@ After deployment:
 
 ## Post-Deployment Verification
 
-After running `Terraform apply`, verify your deployment is healthy:
+After running `terraform apply`, verify your deployment is healthy:
 
 ### 1. Check Terraform Outputs
 
 ```bash
 # Verify all outputs are populated
-Terraform output
+terraform output
 
 # Expected outputs:
 # - keycloak_url (ALB DNS or custom domain)
@@ -1094,12 +1094,12 @@ Terraform output
 **Check ECS service is running:**
 
 ```bash
-# Get cluster and service names from Terraform outputs
-CLUSTER_NAME=$(Terraform output -raw ecs_cluster_name)
-SERVICE_NAME=$(Terraform output -raw ecs_service_name)
+# Get cluster and service names from terraform outputs
+CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
+SERVICE_NAME=$(terraform output -raw ecs_service_name)
 
 # Check service status
-AWS ECS describe-services \
+aws ecs describe-services \
   --cluster "$CLUSTER_NAME" \
   --services "$SERVICE_NAME" \
   --query 'services[0].{desired:desiredCount,running:runningCount,pending:pendingCount,status:status}' \
@@ -1113,7 +1113,7 @@ AWS ECS describe-services \
 
 ```bash
 # View last 5 service events
-AWS ECS describe-services \
+aws ecs describe-services \
   --cluster "$CLUSTER_NAME" \
   --services "$SERVICE_NAME" \
   --query 'services[0].events[:5].[createdAt,message]' \
@@ -1128,11 +1128,11 @@ AWS ECS describe-services \
 **Check ALB target group health:**
 
 ```bash
-# Get target group ARN from Terraform outputs
-TARGET_GROUP_ARN=$(Terraform output -raw target_group_arn)
+# Get target group ARN from terraform outputs
+TARGET_GROUP_ARN=$(terraform output -raw target_group_arn)
 
 # Check target health
-AWS elbv2 describe-target-health \
+aws elbv2 describe-target-health \
   --target-group-arn "$TARGET_GROUP_ARN" \
   --query 'TargetHealthDescriptions[*].{Target:Target.Id,Port:Target.Port,Health:TargetHealth.State,Reason:TargetHealth.Reason}' \
   --output table
@@ -1155,11 +1155,11 @@ AWS elbv2 describe-target-health \
 **Tail ECS logs in real-time:**
 
 ```bash
-# Get log group name from Terraform outputs
-LOG_GROUP=$(Terraform output -raw cloudwatch_log_group_name)
+# Get log group name from terraform outputs
+LOG_GROUP=$(terraform output -raw cloudwatch_log_group_name)
 
 # Tail logs (requires AWS CLI v2)
-AWS logs tail "$LOG_GROUP" --follow --format short
+aws logs tail "$LOG_GROUP" --follow --format short
 
 # Look for successful startup messages:
 # - "Keycloak 26.0 (powered by Quarkus)"
@@ -1171,7 +1171,7 @@ AWS logs tail "$LOG_GROUP" --follow --format short
 
 ```bash
 # Search for ERROR level logs in last 30 minutes
-AWS logs filter-log-events \
+aws logs filter-log-events \
   --log-group-name "$LOG_GROUP" \
   --filter-pattern "ERROR" \
   --start-time $(($(date +%s) - 1800))000 \
@@ -1187,11 +1187,11 @@ AWS logs filter-log-events \
 **Check RDS instance is available:**
 
 ```bash
-# Get DB instance ID from Terraform outputs
-DB_INSTANCE=$(Terraform output -raw db_instance_id)
+# Get DB instance ID from terraform outputs
+DB_INSTANCE=$(terraform output -raw db_instance_id)
 
 # Check RDS status
-AWS RDS describe-db-instances \
+aws rds describe-db-instances \
   --db-instance-identifier "$DB_INSTANCE" \
   --query 'DBInstances[0].{Status:DBInstanceStatus,Endpoint:Endpoint.Address,Engine:Engine,Version:EngineVersion}' \
   --output table
@@ -1203,7 +1203,7 @@ AWS RDS describe-db-instances \
 
 ```bash
 # Check RDS connection count metric
-AWS cloudwatch get-metric-statistics \
+aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name DatabaseConnections \
   --dimensions Name=DBInstanceIdentifier,Value="$DB_INSTANCE" \
@@ -1223,7 +1223,7 @@ AWS cloudwatch get-metric-statistics \
 
 ```bash
 # Get Keycloak URL
-KEYCLOAK_URL=$(Terraform output -raw keycloak_url)
+KEYCLOAK_URL=$(terraform output -raw keycloak_url)
 
 # Test health endpoint
 curl -i "$KEYCLOAK_URL/health/ready"
@@ -1245,8 +1245,8 @@ curl -I "$KEYCLOAK_URL/admin/"
 
 ```bash
 # Get admin credentials
-ADMIN_SECRET=$(Terraform output -raw admin_credentials_secret_id)
-ADMIN_CREDS=$(AWS secretsmanager get-secret-value \
+ADMIN_SECRET=$(terraform output -raw admin_credentials_secret_id)
+ADMIN_CREDS=$(aws secretsmanager get-secret-value \
   --secret-id "$ADMIN_SECRET" \
   --query SecretString \
   --output text)
@@ -1263,8 +1263,8 @@ echo "$ADMIN_CREDS" | jq -r '"Username: \(.username)\nPassword: \(.password)"'
 
 ```bash
 # List alarms for your deployment
-AWS cloudwatch describe-alarms \
-  --alarm-name-prefix "$(Terraform output -raw ecs_cluster_name | cut -d'-' -f1)" \
+aws cloudwatch describe-alarms \
+  --alarm-name-prefix "$(terraform output -raw ecs_cluster_name | cut -d'-' -f1)" \
   --query 'MetricAlarms[*].{Name:AlarmName,State:StateValue}' \
   --output table
 
@@ -1282,12 +1282,12 @@ AWS cloudwatch describe-alarms \
 
 | Phase                  | Duration        | How to Monitor                         |
 | ---------------------- | --------------- | -------------------------------------- |
-| Terraform apply        | 15-20 min       | Watch Terraform output                 |
-| RDS creation           | 10-12 min       | `AWS RDS describe-db-instances`        |
-| ECS service creation   | 2-3 min         | `AWS ECS describe-services`            |
+| terraform apply        | 15-20 min       | Watch terraform output                 |
+| RDS creation           | 10-12 min       | `aws rds describe-db-instances`        |
+| ECS service creation   | 2-3 min         | `aws ecs describe-services`            |
 | Container image pull   | 1-2 min         | CloudWatch logs: "Pulling from quay.io"|
 | Keycloak startup       | 2-3 min         | CloudWatch logs: "Keycloak started"    |
-| Health check pass      | 1-2 min         | `AWS elbv2 describe-target-health`     |
+| Health check pass      | 1-2 min         | `aws elbv2 describe-target-health`     |
 | **Total**              | **15-25 min**   | All targets healthy                    |
 
 **If deployment exceeds 25 minutes:**
@@ -1302,10 +1302,10 @@ AWS cloudwatch describe-alarms \
 
 ```bash
 # Check task failure reasons
-AWS ECS list-tasks --cluster "$CLUSTER_NAME" --desired-status STOPPED --max-items 5
+aws ecs list-tasks --cluster "$CLUSTER_NAME" --desired-status STOPPED --max-items 5
 
 # Get task failure details
-AWS ECS describe-tasks \
+aws ecs describe-tasks \
   --cluster "$CLUSTER_NAME" \
   --tasks <TASK_ARN> \
   --query 'tasks[0].{StopCode:stopCode,StopReason:stoppedReason,Containers:containers[0].reason}'
@@ -1320,7 +1320,7 @@ AWS ECS describe-tasks \
 
 ```bash
 # Get detailed health check failures
-AWS elbv2 describe-target-health \
+aws elbv2 describe-target-health \
   --target-group-arn "$TARGET_GROUP_ARN" \
   --query 'TargetHealthDescriptions[?TargetHealth.State==`unhealthy`]'
 
@@ -1332,7 +1332,7 @@ AWS elbv2 describe-target-health \
 
 ```bash
 # Check for connection errors in logs
-AWS logs filter-log-events \
+aws logs filter-log-events \
   --log-group-name "$LOG_GROUP" \
   --filter-pattern "\"connection\" \"database\" \"ERROR\"" \
   --query 'events[*].message'
@@ -1597,151 +1597,20 @@ Estimated cost: ~$200-800/month (depends on load patterns)
 
 ### WAF Setup Guide
 
-For production deployments, you must configure AWS WAF. Here's a quick setup:
+For production deployments, you must configure AWS WAF. Recommended configuration:
 
-```hcl
-# Create WAF WebACL with AWS Managed Rules
-resource "aws_wafv2_web_acl" "Keycloak" {
-  name  = "${var.name}-Keycloak-${var.environment}"
-  scope = "REGIONAL"
+1. Create a WAF WebACL with `scope = "REGIONAL"`
+2. Add AWS Managed Rules:
+   - `AWSManagedRulesCommonRuleSet` - OWASP Top 10 protection
+   - `AWSManagedRulesKnownBadInputsRuleSet` - Blocks malicious patterns
+3. Add rate limiting rule (e.g., 2000 requests per 5 minutes per IP)
+4. Pass the WebACL ARN via `waf_acl_arn` variable
 
-  default_action {
-    allow {}
-  }
-
-  # Core Rule Set - protects against OWASP Top 10
-  rule {
-    name     = "AWSManagedRulesCommonRuleSet"
-    priority = 1
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        vendor_name = "AWS"
-        name        = "AWSManagedRulesCommonRuleSet"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "AWSManagedRulesCommonRuleSet"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  # Known Bad Inputs - blocks known malicious patterns
-  rule {
-    name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 2
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        vendor_name = "AWS"
-        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "AWSManagedRulesKnownBadInputsRuleSet"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  # Rate limiting - prevent brute force attacks
-  rule {
-    name     = "RateLimitRule"
-    priority = 3
-
-    action {
-      block {}
-    }
-
-    statement {
-      rate_based_statement {
-        limit              = 2000  # requests per 5 minutes per IP
-        aggregate_key_type = "IP"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "RateLimitRule"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "${var.name}-Keycloak-${var.environment}"
-    sampled_requests_enabled   = true
-  }
-
-  tags = {
-    Name        = "${var.name}-Keycloak-${var.environment}"
-    Environment = var.environment
-  }
-}
-
-# Use the WAF with Keycloak module
-module "Keycloak" {
-  source = "./modules/Keycloak"
-
-  # ... other variables ...
-  waf_acl_arn = aws_wafv2_web_acl.Keycloak.arn
-}
-```
+See [AWS WAF documentation](https://docs.aws.amazon.com/waf/latest/developerguide/waf-chapter.html) for detailed setup instructions.
 
 ### KMS Key Permissions
 
-If you provide custom KMS keys, ensure the following permissions are granted:
-
-**For RDS encryption** (`db_kms_key_id`):
-
-```json
-{
-  "Sid": "Allow RDS to use the key",
-  "Effect": "Allow",
-  "Principal": {
-    "Service": "RDS.amazonaws.com"
-  },
-  "Action": [
-    "kms:Decrypt",
-    "kms:CreateGrant",
-    "kms:DescribeKey"
-  ],
-  "Resource": "*"
-}
-```
-
-**For Secrets Manager** (`secrets_kms_key_id`):
-
-```json
-{
-  "Sid": "Allow ECS task execution role",
-  "Effect": "Allow",
-  "Principal": {
-    "AWS": "arn:AWS:iam::ACCOUNT_ID:role/EXECUTION_ROLE_NAME"
-  },
-  "Action": [
-    "kms:Decrypt",
-    "kms:DescribeKey"
-  ],
-  "Resource": "*",
-  "Condition": {
-    "StringEquals": {
-      "kms:ViaService": "secretsmanager.REGION.amazonaws.com"
-    }
-  }
-}
-```
+If you provide custom KMS keys (`db_kms_key_id` or `secrets_kms_key_id`), ensure the appropriate service principals have decrypt permissions. See [AWS KMS documentation](https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html) for policy examples.
 
 ## Monitoring
 
@@ -1755,7 +1624,7 @@ The module creates CloudWatch alarms for:
 View logs:
 
 ```bash
-AWS logs tail /ECS/myapp-Keycloak-prod --follow
+aws logs tail /ECS/myapp-Keycloak-prod --follow
 ```
 
 ## Scaling
@@ -1813,7 +1682,7 @@ db_instance_class       = "db.t4g.small"  # supports 410+ connections
 Update the `keycloak_version` variable and apply:
 
 ```bash
-Terraform apply -var="keycloak_version=26.1"
+terraform apply -var="keycloak_version=26.1"
 ```
 
 ECS will perform a rolling update with circuit breaker protection.
@@ -1837,12 +1706,12 @@ Before migrating:
 
    ```bash
    # For RDS
-   AWS RDS create-db-snapshot \
+   aws rds create-db-snapshot \
      --db-instance-identifier <instance-id> \
      --db-snapshot-identifier Keycloak-pre-migration-$(date +%Y%m%d)
 
    # For Aurora
-   AWS RDS create-db-cluster-snapshot \
+   aws rds create-db-cluster-snapshot \
      --db-cluster-identifier <cluster-id> \
      --db-cluster-snapshot-identifier Keycloak-pre-migration-$(date +%Y%m%d)
    ```
@@ -1850,7 +1719,7 @@ Before migrating:
 2. Note current configuration:
 
    ```bash
-   Terraform show | grep -A 20 "db_"
+   terraform show | grep -A 20 "db_"
    ```
 
 3. Export Keycloak realm configuration (optional but recommended):
@@ -1884,7 +1753,7 @@ Before migrating:
 2. **Plan the migration**:
 
    ```bash
-   Terraform plan -out=migration.tfplan
+   terraform plan -out=migration.tfplan
    ```
 
    Review the plan carefully. You should see:
@@ -1897,31 +1766,31 @@ Before migrating:
 4. **Stop Keycloak ECS tasks** to prevent write operations:
 
    ```bash
-   AWS ECS update-service \
+   aws ecs update-service \
      --cluster <cluster-name> \
      --service <service-name> \
      --desired-count 0
 
    # Wait for tasks to stop
-   AWS ECS wait services-stable --cluster <cluster-name> --services <service-name>
+   aws ecs wait services-stable --cluster <cluster-name> --services <service-name>
    ```
 
 5. **Create final RDS snapshot**:
 
    ```bash
-   AWS RDS create-db-snapshot \
+   aws rds create-db-snapshot \
      --db-instance-identifier <RDS-instance-id> \
      --db-snapshot-identifier Keycloak-final-snapshot-$(date +%Y%m%d-%H%M)
 
    # Wait for snapshot to complete
-   AWS RDS wait db-snapshot-completed \
+   aws rds wait db-snapshot-completed \
      --db-snapshot-identifier Keycloak-final-snapshot-$(date +%Y%m%d-%H%M)
    ```
 
 6. **Apply Terraform changes**:
 
    ```bash
-   Terraform apply migration.tfplan
+   terraform apply migration.tfplan
    ```
 
    This will:
@@ -1949,7 +1818,7 @@ Before migrating:
 7. **Restart Keycloak ECS tasks**:
 
    ```bash
-   AWS ECS update-service \
+   aws ecs update-service \
      --cluster <cluster-name> \
      --service <service-name> \
      --desired-count 2  # Or your original desired count
@@ -1959,10 +1828,10 @@ Before migrating:
 
    ```bash
    # Check Aurora cluster status
-   AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id>
+   aws rds describe-db-clusters --db-cluster-identifier <cluster-id>
 
    # Test Keycloak access
-   curl -I $(Terraform output -raw keycloak_url)
+   curl -I $(terraform output -raw keycloak_url)
 
    # Verify admin login
    ```
@@ -1996,7 +1865,7 @@ Before migrating:
 3. **Monitor scaling** after migration:
 
    ```bash
-   AWS cloudwatch get-metric-statistics \
+   aws cloudwatch get-metric-statistics \
      --namespace AWS/RDS \
      --metric-name ServerlessDatabaseCapacity \
      --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -2015,7 +1884,7 @@ Before migrating:
 1. **Create Aurora Provisioned snapshot**:
 
    ```bash
-   AWS RDS create-db-cluster-snapshot \
+   aws rds create-db-cluster-snapshot \
      --db-cluster-identifier <cluster-id> \
      --db-cluster-snapshot-identifier aurora-to-serverless-$(date +%Y%m%d)
    ```
@@ -2045,7 +1914,7 @@ Before migrating:
 
    ```bash
    # Check average ACU usage
-   AWS cloudwatch get-metric-statistics \
+   aws cloudwatch get-metric-statistics \
      --namespace AWS/RDS \
      --metric-name ServerlessDatabaseCapacity \
      --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -2087,23 +1956,23 @@ Before migrating:
 
 ```bash
 # 1. Stop application
-AWS ECS update-service --cluster <cluster> --service <service> --desired-count 0
+aws ecs update-service --cluster <cluster> --service <service> --desired-count 0
 
 # 2. Export data
-PGPASSWORD=$(AWS secretsmanager get-secret-value --secret-id <old-secret-id> \
+PGPASSWORD=$(aws secretsmanager get-secret-value --secret-id <old-secret-id> \
   --query 'SecretString' --output text | jq -r '.password') \
 pg_dump -h <old-endpoint> -U Keycloak -d Keycloak -F c -f keycloak_backup.dump
 
 # 3. Apply Terraform (creates new database)
-Terraform apply
+terraform apply
 
 # 4. Import data
-PGPASSWORD=$(AWS secretsmanager get-secret-value --secret-id <new-secret-id> \
+PGPASSWORD=$(aws secretsmanager get-secret-value --secret-id <new-secret-id> \
   --query 'SecretString' --output text | jq -r '.password') \
 pg_restore -h <new-endpoint> -U Keycloak -d Keycloak -c keycloak_backup.dump
 
 # 5. Restart application
-AWS ECS update-service --cluster <cluster> --service <service> --desired-count 2
+aws ecs update-service --cluster <cluster> --service <service> --desired-count 2
 ```
 
 #### Method 2: AWS Database Migration Service (Near-zero downtime)
@@ -2130,12 +1999,12 @@ If migration fails:
 
    ```bash
    # For RDS
-   AWS RDS restore-db-instance-from-db-snapshot \
+   aws rds restore-db-instance-from-db-snapshot \
      --db-instance-identifier Keycloak-rollback \
      --db-snapshot-identifier Keycloak-pre-migration-<date>
 
    # For Aurora
-   AWS RDS restore-db-cluster-from-snapshot \
+   aws rds restore-db-cluster-from-snapshot \
      --db-cluster-identifier Keycloak-rollback \
      --snapshot-identifier Keycloak-pre-migration-<date>
    ```
@@ -2186,7 +2055,7 @@ Use the cost calculator in each example README for detailed estimates.
 1. Check ECS service events:
 
    ```bash
-   AWS ECS describe-services --cluster <cluster-name> --services <service-name>
+   aws ecs describe-services --cluster <cluster-name> --services <service-name>
    ```
 
 2. Check CloudWatch logs for errors
@@ -2220,11 +2089,11 @@ Use the cost calculator in each example README for detailed estimates.
 
 ```bash
 # Check current capacity
-AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
+aws rds describe-db-clusters --db-cluster-identifier <cluster-id> \
   --query 'DBClusters[0].ServerlessV2ScalingConfiguration'
 
 # Monitor scaling metrics
-AWS cloudwatch get-metric-statistics \
+aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name ServerlessDatabaseCapacity \
   --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -2259,11 +2128,11 @@ aurora_backtrack_window = 24  # Hours (max 72)
 
 ```bash
 # Verify backtrack is enabled
-AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
+aws rds describe-db-clusters --db-cluster-identifier <cluster-id> \
   --query 'DBClusters[0].BacktrackWindow'
 
 # Perform backtrack
-AWS RDS backtrack-db-cluster \
+aws rds backtrack-db-cluster \
   --db-cluster-identifier <cluster-id> \
   --backtrack-to "2024-01-15T10:30:00Z"
 ```
@@ -2278,7 +2147,7 @@ AWS RDS backtrack-db-cluster \
 
 ```bash
 # Check cluster instances
-AWS RDS describe-db-cluster-members --db-cluster-identifier <cluster-id>
+aws rds describe-db-cluster-members --db-cluster-identifier <cluster-id>
 ```
 
 **Causes**:
@@ -2299,7 +2168,7 @@ aurora_replica_count = 1  # Override auto-detection
 
 ```bash
 # List all cluster members
-AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
+aws rds describe-db-clusters --db-cluster-identifier <cluster-id> \
   --query 'DBClusters[0].DBClusterMembers[*].[DBInstanceIdentifier,IsClusterWriter]'
 ```
 
@@ -2319,11 +2188,11 @@ AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
 
 ```bash
 # Get all endpoints
-Terraform output db_instance_endpoint  # Writer endpoint
-Terraform output db_reader_endpoint    # Reader endpoint (Aurora only)
+terraform output db_instance_endpoint  # Writer endpoint
+terraform output db_reader_endpoint    # Reader endpoint (Aurora only)
 
 # Or via AWS CLI
-AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
+aws rds describe-db-clusters --db-cluster-identifier <cluster-id> \
   --query 'DBClusters[0].[Endpoint,ReaderEndpoint,Port]'
 ```
 
@@ -2331,7 +2200,7 @@ AWS RDS describe-db-clusters --db-cluster-identifier <cluster-id> \
 
 ```bash
 # Verify secret contains correct endpoint
-AWS secretsmanager get-secret-value --secret-id <secret-id> \
+aws secretsmanager get-secret-value --secret-id <secret-id> \
   --query 'SecretString' --output text | jq .
 ```
 
@@ -2339,7 +2208,7 @@ AWS secretsmanager get-secret-value --secret-id <secret-id> \
 
 ```bash
 # Start a one-off task with awscli
-AWS ECS run-task --cluster <cluster-name> \
+aws ecs run-task --cluster <cluster-name> \
   --task-definition <task-def-arn> \
   --network-configuration "awsvpcConfiguration={subnets=[<subnet-id>],securityGroups=[<sg-id>]}" \
   --overrides '{"containerOverrides":[{"name":"Keycloak","command":["sh","-c","apk add PostgreSQL-client && psql -h <endpoint> -U Keycloak -d Keycloak -c \"\\dt\""]}]}'
@@ -2353,7 +2222,7 @@ AWS ECS run-task --cluster <cluster-name> \
 
 ```bash
 # Enable Performance Insights (if not already)
-AWS RDS modify-db-instance --db-instance-identifier <instance-id> \
+aws rds modify-db-instance --db-instance-identifier <instance-id> \
   --enable-performance-insights \
   --performance-insights-retention-period 7
 ```
@@ -2414,7 +2283,7 @@ AWS RDS modify-db-instance --db-instance-identifier <instance-id> \
 4. **Monitor failover events**:
 
 ```bash
-AWS RDS describe-events --source-type db-cluster \
+aws rds describe-events --source-type db-cluster \
   --source-identifier <cluster-id> \
   --duration 60
 ```
@@ -2429,7 +2298,7 @@ AWS RDS describe-events --source-type db-cluster \
 
    ```bash
    # Check if capacity is stuck at max
-   AWS cloudwatch get-metric-statistics \
+   aws cloudwatch get-metric-statistics \
      --namespace AWS/RDS \
      --metric-name ServerlessDatabaseCapacity \
      --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
@@ -2465,7 +2334,7 @@ db_instance_class = "db.t4g.micro"
 
 ```bash
 # Check Aurora I/O costs
-AWS cloudwatch get-metric-statistics \
+aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name VolumeReadIOPs \
   --dimensions Name=DBClusterIdentifier,Value=<cluster-id> \
