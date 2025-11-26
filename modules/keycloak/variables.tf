@@ -383,6 +383,30 @@ variable "db_engine_version" {
   default     = "16.3"
 }
 
+variable "db_parameters" {
+  description = <<-EOT
+    Additional PostgreSQL parameters to set in the parameter group.
+    These are applied in addition to the Keycloak-optimized defaults.
+
+    Default parameters (always applied):
+    - log_min_duration_statement = 1000 (log slow queries > 1s)
+    - log_statement = ddl (log schema changes)
+    - idle_in_transaction_session_timeout = 600000 (kill idle transactions after 10min)
+
+    Example:
+    db_parameters = [
+      { name = "work_mem", value = "256MB" },
+      { name = "max_connections", value = "200", apply_method = "pending-reboot" }
+    ]
+  EOT
+  type = list(object({
+    name         = string
+    value        = string
+    apply_method = optional(string, "immediate")
+  }))
+  default = []
+}
+
 variable "db_backup_retention_period" {
   description = "Number of days to retain RDS backups"
   type        = number

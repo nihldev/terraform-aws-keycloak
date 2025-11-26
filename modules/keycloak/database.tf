@@ -102,6 +102,112 @@ resource "aws_db_subnet_group" "keycloak" {
 }
 
 #######################
+# RDS Parameter Group
+# Keycloak-optimized PostgreSQL settings
+#######################
+
+resource "aws_db_parameter_group" "keycloak" {
+  count = local.is_rds ? 1 : 0
+
+  name_prefix = "${var.name}-keycloak-${var.environment}-"
+  family      = "postgres${split(".", var.db_engine_version)[0]}"
+  description = "Keycloak-optimized PostgreSQL parameters"
+
+  # Log slow queries (queries taking longer than 1 second)
+  parameter {
+    name  = "log_min_duration_statement"
+    value = "1000"
+  }
+
+  # Log DDL statements (schema changes) for audit trail
+  parameter {
+    name  = "log_statement"
+    value = "ddl"
+  }
+
+  # Kill idle transactions after 10 minutes to prevent connection leaks
+  parameter {
+    name  = "idle_in_transaction_session_timeout"
+    value = "600000"
+  }
+
+  # Apply custom parameters from variable
+  dynamic "parameter" {
+    for_each = var.db_parameters
+    content {
+      name         = parameter.value.name
+      value        = parameter.value.value
+      apply_method = lookup(parameter.value, "apply_method", "immediate")
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-${var.environment}"
+      Environment = var.environment
+    }
+  )
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+#######################
+# Aurora Cluster Parameter Group
+# Keycloak-optimized PostgreSQL settings for Aurora
+#######################
+
+resource "aws_rds_cluster_parameter_group" "keycloak" {
+  count = local.is_any_aurora ? 1 : 0
+
+  name_prefix = "${var.name}-keycloak-${var.environment}-"
+  family      = "aurora-postgresql${split(".", var.db_engine_version)[0]}"
+  description = "Keycloak-optimized Aurora PostgreSQL cluster parameters"
+
+  # Log slow queries (queries taking longer than 1 second)
+  parameter {
+    name  = "log_min_duration_statement"
+    value = "1000"
+  }
+
+  # Log DDL statements (schema changes) for audit trail
+  parameter {
+    name  = "log_statement"
+    value = "ddl"
+  }
+
+  # Kill idle transactions after 10 minutes to prevent connection leaks
+  parameter {
+    name  = "idle_in_transaction_session_timeout"
+    value = "600000"
+  }
+
+  # Apply custom parameters from variable
+  dynamic "parameter" {
+    for_each = var.db_parameters
+    content {
+      name         = parameter.value.name
+      value        = parameter.value.value
+      apply_method = lookup(parameter.value, "apply_method", "immediate")
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-${var.environment}"
+      Environment = var.environment
+    }
+  )
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+#######################
 # Security Group - Database
 #######################
 
@@ -164,6 +270,7 @@ resource "aws_db_instance" "keycloak" {
   db_subnet_group_name   = aws_db_subnet_group.keycloak.name
   vpc_security_group_ids = [aws_security_group.rds.id]
   publicly_accessible    = false
+  parameter_group_name   = aws_db_parameter_group.keycloak[0].name
 
   # tfsec:ignore:aws-rds-specify-backup-retention Backup retention is configurable with validation ensuring minimum 7 days
   backup_retention_period = var.db_backup_retention_period
@@ -207,8 +314,9 @@ resource "aws_rds_cluster" "keycloak" {
   master_username    = "keycloak"
   master_password    = random_password.db_password.result
 
-  db_subnet_group_name   = aws_db_subnet_group.keycloak.name
-  vpc_security_group_ids = [aws_security_group.rds.id]
+  db_subnet_group_name            = aws_db_subnet_group.keycloak.name
+  vpc_security_group_ids          = [aws_security_group.rds.id]
+  db_cluster_parameter_group_name = aws_rds_cluster_parameter_group.keycloak[0].name
 
   # Backup configuration
   # tfsec:ignore:aws-rds-specify-backup-retention Backup retention is configurable with validation ensuring minimum 7 days
