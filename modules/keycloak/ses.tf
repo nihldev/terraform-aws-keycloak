@@ -91,6 +91,34 @@ resource "aws_ses_email_identity" "keycloak" {
 # IAM User for SMTP Credentials
 # SES SMTP requires IAM user credentials (not role credentials)
 #######################
+#
+# SECURITY NOTE: Credential Rotation
+# ===================================
+# The IAM access keys created below are long-lived credentials.
+# AWS recommends rotating IAM access keys every 90 days.
+#
+# Manual rotation process:
+#   1. Create new access key:
+#      aws iam create-access-key --user-name <ses-user-name>
+#
+#   2. Derive new SMTP password (using this module's script):
+#      echo '{"secret_key": "NEW_SECRET_KEY", "region": "YOUR_REGION"}' | \
+#        python3 /path/to/modules/keycloak/scripts/derive-ses-smtp-password.py
+#
+#   3. Update the secret in Secrets Manager:
+#      aws secretsmanager update-secret --secret-id <secret-id> \
+#        --secret-string '{"smtp_host":"...","smtp_password":"NEW_DERIVED_PASSWORD",...}'
+#
+#   4. Verify Keycloak can still send emails
+#
+#   5. Delete old access key:
+#      aws iam delete-access-key --user-name <ses-user-name> --access-key-id OLD_KEY_ID
+#
+# TODO: Implement automatic rotation using Secrets Manager rotation with Lambda.
+# This would create a Lambda function that automatically rotates the credentials
+# on a schedule (e.g., every 90 days) without manual intervention.
+#
+#######################
 
 resource "aws_iam_user" "ses_smtp" {
   count = var.enable_ses ? 1 : 0
