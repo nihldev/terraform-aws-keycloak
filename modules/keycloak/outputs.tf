@@ -102,21 +102,25 @@ output "cost_warning" {
 output "db_credentials_secret_arn" {
   description = "ARN of the Secrets Manager secret containing database credentials"
   value       = aws_secretsmanager_secret.keycloak_db.arn
+  sensitive   = true
 }
 
 output "admin_credentials_secret_arn" {
   description = "ARN of the Secrets Manager secret containing Keycloak admin credentials"
   value       = aws_secretsmanager_secret.keycloak_admin.arn
+  sensitive   = true
 }
 
 output "admin_credentials_secret_id" {
   description = "Secret ID for retrieving admin credentials (use with AWS CLI: aws secretsmanager get-secret-value --secret-id <this-value>)"
   value       = aws_secretsmanager_secret.keycloak_admin.id
+  sensitive   = true
 }
 
 output "db_credentials_secret_id" {
   description = "Secret ID for retrieving database credentials (use with AWS CLI: aws secretsmanager get-secret-value --secret-id <this-value>)"
   value       = aws_secretsmanager_secret.keycloak_db.id
+  sensitive   = true
 }
 
 #######################
@@ -193,11 +197,13 @@ output "ses_smtp_endpoint" {
 output "ses_smtp_credentials_secret_arn" {
   description = "ARN of the Secrets Manager secret containing SMTP credentials"
   value       = var.enable_ses ? aws_secretsmanager_secret.ses_smtp[0].arn : ""
+  sensitive   = true
 }
 
 output "ses_smtp_credentials_secret_id" {
   description = "Secret ID for retrieving SMTP credentials (use: aws secretsmanager get-secret-value --secret-id <this-value>)"
   value       = var.enable_ses ? aws_secretsmanager_secret.ses_smtp[0].id : ""
+  sensitive   = true
 }
 
 output "ses_from_email" {
