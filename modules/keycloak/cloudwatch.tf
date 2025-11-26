@@ -195,3 +195,34 @@ resource "aws_cloudwatch_metric_alarm" "aurora_high_cpu" {
     }
   )
 }
+
+# Aurora Serverless v2 high capacity alarm
+# Alerts when database capacity approaches the configured maximum ACUs
+resource "aws_cloudwatch_metric_alarm" "aurora_serverless_high_capacity" {
+  count = var.database_type == "aurora-serverless" ? 1 : 0
+
+  alarm_name          = "${var.name}-keycloak-aurora-${var.environment}-high-capacity"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "ServerlessDatabaseCapacity"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.db_capacity_max * 0.8 # Alert at 80% of max capacity
+  alarm_description   = "Aurora Serverless v2 capacity is above 80% of maximum (${var.db_capacity_max} ACUs). Consider increasing db_capacity_max."
+
+  alarm_actions = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != "" ? [var.alarm_sns_topic_arn] : []
+
+  dimensions = {
+    DBClusterIdentifier = aws_rds_cluster.keycloak[0].id
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name}-keycloak-aurora-${var.environment}-high-capacity"
+      Environment = var.environment
+    }
+  )
+}
