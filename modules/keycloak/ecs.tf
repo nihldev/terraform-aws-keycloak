@@ -69,8 +69,10 @@ locals {
       value = var.keycloak_loglevel
     },
     {
-      name  = "KC_PROXY"
-      value = "edge"
+      # Keycloak 24+ proxy configuration (KC_PROXY is deprecated)
+      # Tells Keycloak to trust X-Forwarded-* headers from the ALB
+      name  = "KC_PROXY_HEADERS"
+      value = "xforwarded"
     },
     {
       name  = "KC_HTTP_ENABLED"
