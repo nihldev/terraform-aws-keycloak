@@ -135,7 +135,7 @@ resource "aws_iam_access_key" "ses_smtp" {
 
 data "external" "ses_smtp_password" {
   count   = var.enable_ses ? 1 : 0
-  program = ["python3", "${path.module}/../../scripts/derive-ses-smtp-password.py"]
+  program = ["python3", "${path.module}/scripts/derive-ses-smtp-password.py"]
 
   query = {
     secret_key = aws_iam_access_key.ses_smtp[0].secret

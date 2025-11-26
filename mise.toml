@@ -12,6 +12,10 @@ terraform-docs = "latest"
 # Code Quality
 pre-commit = "latest"
 
+# Python linting and formatting
+ruff = "latest"
+"pipx:basedpyright" = "latest"
+
 # TOML formatting and linting
 taplo = "latest"
 
@@ -44,9 +48,13 @@ run         = "taplo format"
 description = "Format all Markdown files"
 run         = "markdownlint-cli2 --fix '**/*.md'"
 
+[tasks.fmt-py]
+description = "Format Python files"
+run         = "ruff format ."
+
 [tasks.fmt-all]
-description = "Format all files (Terraform, TOML, Markdown, Workflows)"
-run         = "terraform fmt -recursive . && taplo format && markdownlint-cli2 --fix '**/*.md' && prettier --write '.github/workflows/*.yml'"
+description = "Format all files (Terraform, TOML, Markdown, Workflows, Python)"
+run         = "terraform fmt -recursive . && taplo format && markdownlint-cli2 --fix '**/*.md' && prettier --write '.github/workflows/*.yml' && ruff format ."
 
 [tasks.fmt-workflows]
 description = "Format GitHub workflow files"
@@ -63,6 +71,18 @@ run         = "markdownlint-cli2 '**/*.md'"
 [tasks.lint-workflows]
 description = "Lint GitHub workflow files"
 run         = "actionlint"
+
+[tasks.lint-py]
+description = "Lint Python files with ruff"
+run         = "ruff check ."
+
+[tasks.typecheck-py]
+description = "Type check Python files with basedpyright"
+run         = "basedpyright"
+
+[tasks.check-py]
+description = "Run all Python checks (lint, format check, type check)"
+run         = "ruff check . && ruff format --check . && basedpyright"
 
 [tasks.validate]
 description = "Validate all Terraform configurations"
