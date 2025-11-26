@@ -243,7 +243,8 @@ jobs:
       - name: Run Test - ${{ matrix.test }}
         run: |
           set -o pipefail
-          terraform test tests/${{ matrix.test }}.tftest.hcl -verbose 2>&1 | head -500
+          # Non-verbose output for cleaner logs; run locally with -verbose to debug failures
+          terraform test tests/${{ matrix.test }}.tftest.hcl 2>&1 | head -500
         timeout-minutes: 20
 
   #######################
@@ -278,7 +279,8 @@ jobs:
       - name: Run Output Validation Tests
         run: |
           set -o pipefail
-          terraform test tests/outputs_validation.tftest.hcl -verbose 2>&1 | head -500
+          # Non-verbose output for cleaner logs; run locally with -verbose to debug failures
+          terraform test tests/outputs_validation.tftest.hcl 2>&1 | head -500
         timeout-minutes: 30
 
   #######################
@@ -320,7 +322,8 @@ jobs:
       - name: Run Test - ${{ matrix.example }}
         run: |
           set -o pipefail
-          terraform test tests/${{ matrix.example }}.tftest.hcl -verbose 2>&1 | head -500
+          # Non-verbose output for cleaner logs; run locally with -verbose to debug failures
+          terraform test tests/${{ matrix.example }}.tftest.hcl 2>&1 | head -500
         timeout-minutes: 20
 
   #######################
