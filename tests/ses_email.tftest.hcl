@@ -19,9 +19,64 @@ run "ses_basic_enabled" {
     source = "./examples/ses-email"
   }
 
+  # Verify core resources are created
   assert {
     condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
     error_message = "Plan should create resources with SES enabled"
+  }
+
+  # Verify SES domain identity is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_domain_identity" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create exactly one SES domain identity"
+  }
+
+  # Verify SES DKIM is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_domain_dkim" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create SES DKIM configuration"
+  }
+
+  # Verify IAM user for SMTP is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_iam_user" && r.change.actions[0] == "create"
+    ]) >= 1
+    error_message = "Should create IAM user for SES SMTP"
+  }
+
+  # Verify IAM access key is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_iam_access_key" && r.change.actions[0] == "create"
+    ]) >= 1
+    error_message = "Should create IAM access key for SES SMTP"
+  }
+
+  # Verify Secrets Manager secret for SMTP credentials is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_secretsmanager_secret" && r.change.actions[0] == "create"
+    ]) >= 3
+    error_message = "Should create at least 3 secrets (DB, admin, SES SMTP)"
+  }
+
+  # Verify ECS cluster is still created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ecs_cluster" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create ECS cluster alongside SES"
   }
 }
 
@@ -40,9 +95,22 @@ run "ses_with_email_identity" {
     source = "./examples/ses-email"
   }
 
+  # Verify SES domain identity is created
   assert {
-    condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
-    error_message = "Plan should create resources with SES email identity"
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_domain_identity" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create SES domain identity"
+  }
+
+  # Verify SES email identity is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_email_identity" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create SES email identity when specified"
   }
 }
 
@@ -61,9 +129,22 @@ run "ses_with_custom_from_email" {
     source = "./examples/ses-email"
   }
 
+  # Verify SES domain identity is created
   assert {
-    condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
-    error_message = "Plan should create resources with custom from email"
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_domain_identity" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create SES domain identity with custom from email"
+  }
+
+  # Verify SMTP credentials secret is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_secretsmanager_secret" && r.change.actions[0] == "create"
+    ]) >= 3
+    error_message = "Should create secrets including SES SMTP credentials"
   }
 }
 
@@ -82,9 +163,31 @@ run "ses_with_configuration_set" {
     source = "./examples/ses-email"
   }
 
+  # Verify SES configuration set is created
   assert {
-    condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
-    error_message = "Plan should create resources with SES configuration set"
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_configuration_set" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create SES configuration set when enabled"
+  }
+
+  # Verify SES event destination is created for CloudWatch
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_event_destination" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create SES event destination for metrics"
+  }
+
+  # Verify SES domain identity is still created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_domain_identity" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create SES domain identity"
   }
 }
 
@@ -102,9 +205,46 @@ run "ses_disabled" {
     source = "./examples/ses-email"
   }
 
+  # Verify core Keycloak resources are created
   assert {
     condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
     error_message = "Plan should create resources without SES"
+  }
+
+  # Verify NO SES domain identity is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_domain_identity" && r.change.actions[0] == "create"
+    ]) == 0
+    error_message = "Should NOT create SES domain identity when SES is disabled"
+  }
+
+  # Verify NO SES DKIM is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ses_domain_dkim" && r.change.actions[0] == "create"
+    ]) == 0
+    error_message = "Should NOT create SES DKIM when SES is disabled"
+  }
+
+  # Verify only 2 secrets are created (DB and admin, not SES)
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_secretsmanager_secret" && r.change.actions[0] == "create"
+    ]) == 2
+    error_message = "Should create exactly 2 secrets (DB and admin) when SES is disabled"
+  }
+
+  # Verify ECS cluster is still created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ecs_cluster" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should still create ECS cluster when SES is disabled"
   }
 }
 

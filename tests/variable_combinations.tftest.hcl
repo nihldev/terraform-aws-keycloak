@@ -23,9 +23,28 @@ run "validate_custom_resource_sizing" {
     source = "./examples/basic"
   }
 
+  # Verify core resources are created
   assert {
     condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
     error_message = "Plan should create resources with custom sizing"
+  }
+
+  # Verify ECS task definition is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ecs_task_definition" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create ECS task definition with custom CPU/memory"
+  }
+
+  # Verify RDS instance is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_db_instance" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create RDS instance with custom configuration"
   }
 }
 
@@ -46,9 +65,37 @@ run "validate_monitoring_options" {
     source = "./examples/basic"
   }
 
+  # Verify core resources are created
   assert {
     condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
     error_message = "Plan should create resources with custom monitoring config"
+  }
+
+  # Verify ECS cluster is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ecs_cluster" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create ECS cluster with custom container insights setting"
+  }
+
+  # Verify CloudWatch log group is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_cloudwatch_log_group" && r.change.actions[0] == "create"
+    ]) >= 1
+    error_message = "Should create CloudWatch log group with custom retention"
+  }
+
+  # Verify ECS service is created with health check configuration
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ecs_service" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create ECS service with custom health check grace period"
   }
 }
 
@@ -70,9 +117,37 @@ run "validate_security_options" {
     source = "./examples/basic"
   }
 
+  # Verify core resources are created
   assert {
     condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
     error_message = "Plan should create resources with custom security config"
+  }
+
+  # Verify RDS instance is created with security settings
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_db_instance" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create RDS instance with custom security configuration"
+  }
+
+  # Verify ALB is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_lb" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create ALB with custom deletion protection setting"
+  }
+
+  # Verify security groups are created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_security_group" && r.change.actions[0] == "create"
+    ]) >= 3
+    error_message = "Should create security groups for ALB, ECS, and RDS"
   }
 }
 
@@ -100,9 +175,28 @@ run "validate_keycloak_configuration" {
     source = "./examples/basic"
   }
 
+  # Verify core resources are created
   assert {
     condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
     error_message = "Plan should create resources with custom Keycloak config"
+  }
+
+  # Verify ECS task definition is created with Keycloak configuration
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ecs_task_definition" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create ECS task definition with custom Keycloak version and config"
+  }
+
+  # Verify Secrets Manager secrets are created for admin credentials
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_secretsmanager_secret" && r.change.actions[0] == "create"
+    ]) >= 2
+    error_message = "Should create Secrets Manager secrets for DB and admin credentials"
   }
 }
 
@@ -123,9 +217,46 @@ run "validate_high_availability" {
     source = "./examples/basic"
   }
 
+  # Verify core resources are created
   assert {
     condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
     error_message = "Plan should create resources with HA configuration"
+  }
+
+  # Verify ECS service is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_ecs_service" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create ECS service with HA desired count"
+  }
+
+  # Verify autoscaling target is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_appautoscaling_target" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create autoscaling target for HA configuration"
+  }
+
+  # Verify autoscaling policies are created (CPU and memory)
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_appautoscaling_policy" && r.change.actions[0] == "create"
+    ]) >= 2
+    error_message = "Should create at least 2 autoscaling policies (CPU and memory)"
+  }
+
+  # Verify RDS with multi-AZ
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_db_instance" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create RDS instance with multi-AZ enabled"
   }
 }
 
@@ -147,8 +278,27 @@ run "validate_database_maintenance" {
     source = "./examples/basic"
   }
 
+  # Verify core resources are created
   assert {
     condition     = length([for r in terraform_plan.resource_changes : r if r.change.actions[0] == "create"]) > 0
     error_message = "Plan should create resources with database maintenance config"
+  }
+
+  # Verify RDS instance is created with maintenance configuration
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_db_instance" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create RDS instance with custom maintenance windows"
+  }
+
+  # Verify DB subnet group is created
+  assert {
+    condition = length([
+      for r in terraform_plan.resource_changes : r
+      if r.type == "aws_db_subnet_group" && r.change.actions[0] == "create"
+    ]) == 1
+    error_message = "Should create DB subnet group"
   }
 }
