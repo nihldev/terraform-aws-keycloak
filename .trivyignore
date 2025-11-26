@@ -1,5 +1,4 @@
 # Trivy ignore file for Terraform security scanning
-# Migrated from tfsec (now deprecated)
 
 # VPC flow logs are enabled at the module level, but Trivy scans the internal VPC resource
 # in the external terraform-aws-modules/vpc/aws module
@@ -14,7 +13,6 @@ AVD-AWS-0017
 AVD-AWS-0176
 
 # Load balancer is intentionally public - Keycloak is a user-facing identity provider
-# This was previously ignored via tfsec:ignore:aws-elb-alb-not-public inline comment
 AVD-AWS-0053
 
 # Deletion protection is configurable via variable and enabled by default in prod

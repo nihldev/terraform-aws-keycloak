@@ -523,8 +523,6 @@ resource "aws_xxx" "example" {
 }
 ```
 
-Note: Legacy `#tfsec:ignore` comments are also supported by Trivy.
-
 **TFLint:**
 
 ```hcl

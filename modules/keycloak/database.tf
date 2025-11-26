@@ -279,7 +279,7 @@ resource "aws_db_instance" "keycloak" {
   publicly_accessible    = false
   parameter_group_name   = aws_db_parameter_group.keycloak[0].name
 
-  # tfsec:ignore:aws-rds-specify-backup-retention Backup retention is configurable with validation ensuring minimum 7 days
+  # trivy:ignore:AVD-AWS-0077 Backup retention is configurable with validation ensuring minimum 7 days
   backup_retention_period = var.db_backup_retention_period
   backup_window           = var.db_backup_window
   maintenance_window      = var.db_maintenance_window
@@ -326,7 +326,7 @@ resource "aws_rds_cluster" "keycloak" {
   db_cluster_parameter_group_name = aws_rds_cluster_parameter_group.keycloak[0].name
 
   # Backup configuration
-  # tfsec:ignore:aws-rds-specify-backup-retention Backup retention is configurable with validation ensuring minimum 7 days
+  # trivy:ignore:AVD-AWS-0077 Backup retention is configurable with validation ensuring minimum 7 days
   backup_retention_period      = var.db_backup_retention_period
   preferred_backup_window      = var.db_backup_window
   preferred_maintenance_window = var.db_maintenance_window
