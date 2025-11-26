@@ -559,6 +559,11 @@ variable "ses_domain" {
   EOT
   type        = string
   default     = ""
+
+  validation {
+    condition     = var.enable_ses == false || var.ses_domain != ""
+    error_message = "ses_domain is required when enable_ses is true."
+  }
 }
 
 variable "ses_email_identity" {
