@@ -485,7 +485,16 @@ variable "keycloak_cache_enabled" {
 }
 
 variable "keycloak_cache_stack" {
-  description = "Cache stack protocol (tcp, udp, kubernetes, jdbc-ping). Use 'jdbc-ping' for reliable ECS deployments"
+  description = <<-EOT
+    Cache stack protocol for Keycloak clustering. Use 'jdbc-ping' for ECS deployments.
+
+    Options:
+    - jdbc-ping: Database-based discovery (recommended for ECS/Fargate)
+    - tcp: TCP-based discovery (requires multicast or known hosts)
+    - udp: UDP multicast discovery (not supported in most cloud VPCs)
+
+    Note: 'kubernetes' stack is not supported as this module deploys to ECS, not EKS.
+  EOT
   type        = string
   default     = "jdbc-ping"
 
