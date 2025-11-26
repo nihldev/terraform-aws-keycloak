@@ -22,6 +22,12 @@ on:
       - ".github/workflows/terraform-tests.yml"
   workflow_dispatch: # Allow manual trigger
 
+# Prevent duplicate workflow runs
+# Groups by PR number for pull_request events, or by branch name for push events
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   TERRAFORM_VERSION: "1.14.0"
   TFLINT_VERSION: "v0.54.0"
