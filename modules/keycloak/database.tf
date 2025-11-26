@@ -134,7 +134,7 @@ resource "aws_db_instance" "keycloak" {
 
   deletion_protection       = var.db_deletion_protection
   skip_final_snapshot       = var.db_skip_final_snapshot
-  final_snapshot_identifier = var.db_skip_final_snapshot ? null : "${var.name}-keycloak-${var.environment}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  final_snapshot_identifier = var.db_skip_final_snapshot ? null : "${var.name}-keycloak-${var.environment}-final"
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 
@@ -153,12 +153,6 @@ resource "aws_db_instance" "keycloak" {
       Environment = var.environment
     }
   )
-
-  lifecycle {
-    ignore_changes = [
-      final_snapshot_identifier
-    ]
-  }
 }
 
 #######################
@@ -204,7 +198,7 @@ resource "aws_rds_cluster" "keycloak" {
   # Deletion protection
   deletion_protection       = var.db_deletion_protection
   skip_final_snapshot       = var.db_skip_final_snapshot
-  final_snapshot_identifier = var.db_skip_final_snapshot ? null : "${var.name}-keycloak-${var.environment}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  final_snapshot_identifier = var.db_skip_final_snapshot ? null : "${var.name}-keycloak-${var.environment}-final"
 
   # Logging
   enabled_cloudwatch_logs_exports = ["postgresql"]
@@ -220,12 +214,6 @@ resource "aws_rds_cluster" "keycloak" {
       DatabaseType = var.database_type
     }
   )
-
-  lifecycle {
-    ignore_changes = [
-      final_snapshot_identifier
-    ]
-  }
 }
 
 #######################
