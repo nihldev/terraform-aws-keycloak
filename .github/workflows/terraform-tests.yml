@@ -56,34 +56,53 @@ jobs:
 
       - name: Install linting tools
         run: |
-          npm install -g markdownlint-cli2
+          npm install -g markdownlint-cli2 prettier
           pip install yamllint
 
       # Terraform formatting
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
+      # GitHub Actions workflow linting
+      - name: Setup actionlint
+        uses: raven-actions/actionlint@v2
+        with:
+          matcher: true
+
+      - name: Run actionlint
+        run: actionlint -color
+
       # YAML linting
       - name: YAML Lint
         run: |
-          yamllint -d relaxed .github/workflows/*.yml || true
+          yamllint -d relaxed .github/workflows/*.yml
+
+      # Check GitHub workflow formatting with prettier
+      - name: Check workflow formatting
+        run: |
+          prettier --check '.github/workflows/*.yml'
 
       # Markdown linting
       - name: Markdown Lint
         run: |
-          markdownlint-cli2 "**/*.md" --config .markdownlint.yaml || true
+          markdownlint-cli2 "**/*.md" --config .markdownlint.yaml
 
       # Check for trailing whitespace and file endings
       - name: Check file formatting
         run: |
           # Check for trailing whitespace (excluding markdown)
-          ! git grep -l '[[:blank:]]$' -- '*.tf' '*.py' '*.sh' '*.yml' '*.yaml' || echo "Warning: trailing whitespace found"
+          if git grep -l '[[:blank:]]$' -- '*.tf' '*.py' '*.sh' '*.yml' '*.yaml' 2>/dev/null; then
+            echo "Error: trailing whitespace found"
+            exit 1
+          fi
           # Check files end with newline
           for f in $(find . -name "*.tf" -o -name "*.py" -o -name "*.sh" | head -20); do
             if [ -n "$(tail -c 1 "$f")" ]; then
-              echo "Warning: $f does not end with newline"
+              echo "Error: $f does not end with newline"
+              exit 1
             fi
           done
+          echo "All file formatting checks passed"
 
   #######################
   # Terraform Validation

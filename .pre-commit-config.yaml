@@ -108,6 +108,15 @@ repos:
         description: Lint TOML files for errors and style issues
         stages: [pre-commit]
 
+  # GitHub Actions workflow linting
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.4
+    hooks:
+      - id: actionlint
+        name: Lint GitHub Actions workflows
+        description: Static checker for GitHub Actions workflow files
+        stages: [pre-commit]
+
   # Markdown linting (using mise-installed markdownlint-cli2)
   - repo: local
     hooks:
@@ -121,6 +130,15 @@ repos:
         types: [markdown]
         stages: [pre-commit]
         exclude: '(\.terraform/|node_modules/)'
+
+      # YAML formatting for GitHub workflows (pre-commit - fast)
+      - id: format-workflows
+        name: Format GitHub workflows
+        description: Format GitHub Actions workflow files with prettier
+        entry: prettier --write
+        language: system
+        files: '^\.github/workflows/.*\.ya?ml$'
+        stages: [pre-commit]
 
       # Custom validation: Check tfvars.example coverage (pre-push - validation)
       - id: check-tfvars-coverage

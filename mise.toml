@@ -18,6 +18,12 @@ taplo = "latest"
 # Markdown linting
 markdownlint-cli2 = "latest"
 
+# GitHub Actions workflow linting
+actionlint = "latest"
+
+# YAML/JSON formatting
+prettier = "latest"
+
 # Automatically install pre-push hooks when mise activates
 [hooks]
 postinstall = "tflint --init && pre-commit uninstall && pre-commit install --hook-type pre-push --install-hooks"
@@ -39,8 +45,12 @@ description = "Format all Markdown files"
 run         = "markdownlint-cli2 --fix '**/*.md'"
 
 [tasks.fmt-all]
-description = "Format all files (Terraform, TOML, Markdown)"
-run         = "terraform fmt -recursive . && taplo format && markdownlint-cli2 --fix '**/*.md'"
+description = "Format all files (Terraform, TOML, Markdown, Workflows)"
+run         = "terraform fmt -recursive . && taplo format && markdownlint-cli2 --fix '**/*.md' && prettier --write '.github/workflows/*.yml'"
+
+[tasks.fmt-workflows]
+description = "Format GitHub workflow files"
+run         = "prettier --write '.github/workflows/*.yml'"
 
 [tasks.lint-toml]
 description = "Lint all TOML files"
@@ -49,6 +59,10 @@ run         = "taplo lint"
 [tasks.lint-md]
 description = "Lint all Markdown files"
 run         = "markdownlint-cli2 '**/*.md'"
+
+[tasks.lint-workflows]
+description = "Lint GitHub workflow files"
+run         = "actionlint"
 
 [tasks.validate]
 description = "Validate all Terraform configurations"
