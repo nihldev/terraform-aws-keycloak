@@ -44,7 +44,7 @@ resource "aws_ecr_lifecycle_policy" "keycloak" {
         description  = "Keep last ${var.ecr_image_retention_count} images"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["v", "release", "prod", "staging", "dev"]
+          tagPrefixList = var.ecr_image_tag_prefixes
           countType     = "imageCountMoreThan"
           countNumber   = var.ecr_image_retention_count
         }

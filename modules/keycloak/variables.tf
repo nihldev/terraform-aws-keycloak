@@ -689,6 +689,16 @@ variable "ecr_image_retention_count" {
   default     = 30
 }
 
+variable "ecr_image_tag_prefixes" {
+  description = <<-EOT
+    Tag prefixes for ECR lifecycle policy retention.
+    Images with tags matching these prefixes will be retained (up to ecr_image_retention_count).
+    Common prefixes: "v" (versions), "release", environment names.
+  EOT
+  type        = list(string)
+  default     = ["v", "release", "prod", "staging", "dev"]
+}
+
 variable "ecr_kms_key_id" {
   description = <<-EOT
     KMS key ID for ECR image encryption.
