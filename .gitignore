@@ -54,3 +54,12 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Ruff cache
+.ruff_cache/

@@ -11,7 +11,7 @@ on:
       - ".github/workflows/terraform-tests.yml"
       - ".pre-commit-config.yaml"
       - ".tflint.hcl"
-      - ".tfsec.yml"
+      - ".trivyignore"
   push:
     paths:
       - "modules/keycloak/**"
@@ -178,12 +178,15 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      # TFSec security scanner
-      - name: Run TFSec
-        uses: aquasecurity/tfsec-action@v1.0.0
+      # Trivy security scanner (replaced tfsec which is deprecated)
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@master
         with:
-          working_directory: modules/keycloak
-          soft_fail: false
+          scan-type: "config"
+          scan-ref: "modules/keycloak"
+          trivyignores: ".trivyignore"
+          exit-code: "1"
+          severity: "HIGH,CRITICAL"
 
       # TFLint linter
       - name: Setup TFLint
