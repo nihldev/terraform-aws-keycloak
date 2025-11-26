@@ -4,7 +4,7 @@ This directory contains automated tests for the Keycloak Terraform module using 
 
 ## Test Framework
 
-We use **Terraform's native testing framework** (`.tftest.hcl` files) introduced in Terraform 1.6+. This provides:
+We use **Terraform's native testing framework** (`.tftest.hcl` files). This provides:
 
 - Native HCL syntax for test definitions
 - Built-in support for assertions and validations
@@ -13,7 +13,7 @@ We use **Terraform's native testing framework** (`.tftest.hcl` files) introduced
 
 ## Prerequisites
 
-- Terraform >= 1.6.0
+- Terraform >= 1.14.0
 - AWS credentials configured
 - AWS permissions to create:
   - VPC, Subnets, NAT Gateway, Internet Gateway

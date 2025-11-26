@@ -133,7 +133,7 @@ This module supports three database types to match your workload requirements an
 **Best for:** Cost-conscious deployments, predictable workloads, most use cases
 
 ```hcl
-database_type = "RDS"  # Default
+database_type = "rds"  # Default
 ```
 
 **Characteristics:**
@@ -1363,6 +1363,8 @@ AWS logs filter-log-events \
 | certificate_arn | ACM certificate ARN for HTTPS | string | "" |
 | waf_acl_arn | AWS WAF WebACL ARN (🔴 REQUIRED for prod) | string | "" |
 | alb_deletion_protection | Enable ALB deletion protection | bool | true for prod, false otherwise |
+| alb_stickiness_enabled | Enable session stickiness on ALB target group | bool | false |
+| alb_stickiness_duration | Duration in seconds for ALB stickiness cookie (1-604800) | number | 86400 |
 | alb_access_logs_enabled | Enable ALB access logs | bool | false |
 | alb_access_logs_bucket | S3 bucket for ALB logs | string | "" |
 | alb_access_logs_prefix | S3 prefix for ALB logs | string | "" |
@@ -1389,7 +1391,7 @@ AWS logs filter-log-events \
 
 | Name | Description | Type | Default |
 | ---- | ----------- | ---- | ------- |
-| database_type | Database type: `RDS`, `aurora`, or `aurora-serverless` | string | "RDS" |
+| database_type | Database type: `rds`, `aurora`, or `aurora-serverless` | string | "rds" |
 | db_instance_class | Instance class for RDS/Aurora (ignored for aurora-serverless) | string | "db.t4g.micro" |
 | db_capacity_min | Aurora Serverless v2 minimum ACUs (0.5-128) | number | 0.5 |
 | db_capacity_max | Aurora Serverless v2 maximum ACUs (0.5-128) | number | 2 |
@@ -1425,6 +1427,7 @@ AWS logs filter-log-events \
 
 | Name | Description | Type | Default |
 | ---- | ----------- | ---- | ------- |
+| alarm_sns_topic_arn | SNS topic ARN for CloudWatch alarm notifications | string | "" |
 | cloudwatch_log_retention_days | Log retention in days | number | 30 for prod, 7 otherwise |
 
 ### Encryption
@@ -1463,7 +1466,7 @@ AWS logs filter-log-events \
 ### Development/Testing (RDS - Most Cost-Effective)
 
 ```hcl
-database_type              = "RDS"  # Default, most cost-effective
+database_type              = "rds"  # Default, most cost-effective
 multi_az                   = false
 desired_count              = 1
 task_cpu                   = 512
@@ -1496,7 +1499,7 @@ Estimated cost: ~$40-100/month (depends on usage pattern, scales to near-zero wh
 ### Production (RDS - Balanced)
 
 ```hcl
-database_type              = "RDS"
+database_type              = "rds"
 multi_az                   = true
 desired_count              = 3
 task_cpu                   = 1024
@@ -1867,7 +1870,7 @@ Before migrating:
 
    ```hcl
    # Change database type
-   database_type = "aurora"  # Was "RDS"
+   database_type = "aurora"  # Was "rds"
 
    # Set Aurora-specific settings
    db_instance_class = "db.r6g.large"  # Aurora instance class
@@ -1976,7 +1979,7 @@ Before migrating:
 
    ```hcl
    # Change database type
-   database_type = "aurora-serverless"  # Was "RDS"
+   database_type = "aurora-serverless"  # Was "rds"
 
    # Set serverless capacity
    db_capacity_min = 0.5  # Minimum ACUs
@@ -2454,7 +2457,7 @@ aurora_backtrack_window = 0
 db_performance_insights_retention_period = 7  # Default free tier
 
 # Or switch to RDS for dev
-database_type = "RDS"
+database_type = "rds"
 db_instance_class = "db.t4g.micro"
 ```
 

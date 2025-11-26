@@ -14,7 +14,7 @@ This example demonstrates a complete Keycloak deployment with VPC creation.
 
 This example supports three database types via the `database_type` variable:
 
-1. **`RDS`** (default): RDS PostgreSQL - Most cost-effective, reliable
+1. **`rds`** (default): RDS PostgreSQL - Most cost-effective, reliable
 2. **`aurora`**: Aurora Provisioned - Enhanced HA, read replicas, backtrack
 3. **`aurora-serverless`**: Aurora Serverless v2 - Auto-scaling, variable workloads
 
@@ -79,7 +79,7 @@ environment = "dev"
 aws_region  = "us-east-1"
 
 # RDS PostgreSQL (default, most cost-effective)
-database_type = "RDS"
+database_type = "rds"
 
 # Minimal resources for cost savings
 multi_az              = false
@@ -117,7 +117,7 @@ environment = "prod"
 aws_region  = "us-east-1"
 
 # RDS PostgreSQL (reliable, cost-effective)
-database_type = "RDS"
+database_type = "rds"
 
 # High availability and performance
 multi_az                   = true
