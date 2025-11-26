@@ -108,7 +108,7 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_targets" {
 
 # RDS high CPU alarm
 resource "aws_cloudwatch_metric_alarm" "rds_high_cpu" {
-  count = var.database_type == "rds" ? 1 : 0
+  count = local.is_rds ? 1 : 0
 
   alarm_name          = "${var.name}-keycloak-db-${var.environment}-high-cpu"
   comparison_operator = "GreaterThanThreshold"
@@ -138,7 +138,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_high_cpu" {
 
 # RDS low storage space alarm
 resource "aws_cloudwatch_metric_alarm" "rds_low_storage" {
-  count = var.database_type == "rds" ? 1 : 0
+  count = local.is_rds ? 1 : 0
 
   alarm_name          = "${var.name}-keycloak-db-${var.environment}-low-storage"
   comparison_operator = "LessThanThreshold"
@@ -168,7 +168,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_low_storage" {
 
 # Aurora high CPU alarm
 resource "aws_cloudwatch_metric_alarm" "aurora_high_cpu" {
-  count = contains(["aurora", "aurora-serverless"], var.database_type) ? 1 : 0
+  count = local.is_any_aurora ? 1 : 0
 
   alarm_name          = "${var.name}-keycloak-aurora-${var.environment}-high-cpu"
   comparison_operator = "GreaterThanThreshold"
@@ -199,7 +199,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_high_cpu" {
 # Aurora Serverless v2 high capacity alarm
 # Alerts when database capacity approaches the configured maximum ACUs
 resource "aws_cloudwatch_metric_alarm" "aurora_serverless_high_capacity" {
-  count = var.database_type == "aurora-serverless" ? 1 : 0
+  count = local.is_aurora_serverless ? 1 : 0
 
   alarm_name          = "${var.name}-keycloak-aurora-${var.environment}-high-capacity"
   comparison_operator = "GreaterThanThreshold"

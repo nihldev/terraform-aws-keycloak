@@ -12,6 +12,12 @@ resource "random_password" "db_password" {
 #######################
 
 locals {
+  # Database type helpers (single source of truth for type checks)
+  is_rds               = var.database_type == "rds"
+  is_aurora            = var.database_type == "aurora"
+  is_aurora_serverless = var.database_type == "aurora-serverless"
+  is_any_aurora        = contains(["aurora", "aurora-serverless"], var.database_type)
+
   # Smart default for Aurora replica count
   aurora_replicas = (
     var.aurora_replica_count != null
@@ -30,12 +36,12 @@ locals {
   pi_retention = (
     var.db_performance_insights_retention_period != null
     ? var.db_performance_insights_retention_period
-    : (var.database_type == "aurora" && var.environment == "prod" ? 31 : 7)
+    : (local.is_aurora && var.environment == "prod" ? 31 : 7)
   )
 
   # Cost warning for Aurora in non-prod
   cost_warning = (
-    var.database_type != "rds" && var.environment != "prod"
+    !local.is_rds && var.environment != "prod"
     ? "💰 COST WARNING: Aurora costs ~2x standard RDS. Consider database_type='rds' for dev/test environments to reduce costs."
     : ""
   )
@@ -49,7 +55,7 @@ locals {
 
 check "aurora_cost_warning" {
   assert {
-    condition     = var.database_type == "rds" || var.environment == "prod"
+    condition     = local.is_rds || var.environment == "prod"
     error_message = "COST WARNING: Aurora (${var.database_type}) costs ~2x standard RDS. Consider database_type='rds' for ${var.environment} environment to reduce costs."
   }
 }
@@ -58,7 +64,7 @@ check "multi_az_aurora_guidance" {
   assert {
     condition = !(
       var.multi_az == true &&
-      contains(["aurora", "aurora-serverless"], var.database_type) &&
+      local.is_any_aurora &&
       var.aurora_replica_count == null
     )
     error_message = <<-EOT
@@ -137,7 +143,7 @@ resource "aws_security_group_rule" "rds_ingress_from_ecs" {
 #######################
 
 resource "aws_db_instance" "keycloak" {
-  count = var.database_type == "rds" ? 1 : 0
+  count = local.is_rds ? 1 : 0
 
   identifier     = "${var.name}-keycloak-${var.environment}"
   engine         = "postgres"
@@ -192,7 +198,7 @@ resource "aws_db_instance" "keycloak" {
 #######################
 
 resource "aws_rds_cluster" "keycloak" {
-  count = contains(["aurora", "aurora-serverless"], var.database_type) ? 1 : 0
+  count = local.is_any_aurora ? 1 : 0
 
   cluster_identifier = "${var.name}-keycloak-${var.environment}"
   engine             = "aurora-postgresql"
@@ -215,11 +221,11 @@ resource "aws_rds_cluster" "keycloak" {
   kms_key_id        = var.db_kms_key_id != "" ? var.db_kms_key_id : null
 
   # Aurora-specific features
-  backtrack_window = var.database_type == "aurora" ? local.backtrack_window : 0
+  backtrack_window = local.is_aurora ? local.backtrack_window : 0
 
   # Serverless v2 scaling configuration
   dynamic "serverlessv2_scaling_configuration" {
-    for_each = var.database_type == "aurora-serverless" ? [1] : []
+    for_each = local.is_aurora_serverless ? [1] : []
 
     content {
       min_capacity = var.db_capacity_min
@@ -254,7 +260,7 @@ resource "aws_rds_cluster" "keycloak" {
 
 # Writer instance
 resource "aws_rds_cluster_instance" "keycloak_writer" {
-  count = var.database_type == "aurora" ? 1 : 0
+  count = local.is_aurora ? 1 : 0
 
   identifier         = "${var.name}-keycloak-${var.environment}-writer"
   cluster_identifier = aws_rds_cluster.keycloak[0].id
@@ -281,7 +287,7 @@ resource "aws_rds_cluster_instance" "keycloak_writer" {
 
 # Reader instances (count based on aurora_replica_count)
 resource "aws_rds_cluster_instance" "keycloak_reader" {
-  count = var.database_type == "aurora" ? local.aurora_replicas : 0
+  count = local.is_aurora ? local.aurora_replicas : 0
 
   identifier         = "${var.name}-keycloak-${var.environment}-reader-${count.index + 1}"
   cluster_identifier = aws_rds_cluster.keycloak[0].id
@@ -312,7 +318,7 @@ resource "aws_rds_cluster_instance" "keycloak_reader" {
 
 # Writer instance
 resource "aws_rds_cluster_instance" "keycloak_serverless_writer" {
-  count = var.database_type == "aurora-serverless" ? 1 : 0
+  count = local.is_aurora_serverless ? 1 : 0
 
   identifier         = "${var.name}-keycloak-${var.environment}-serverless-writer"
   cluster_identifier = aws_rds_cluster.keycloak[0].id
@@ -340,7 +346,7 @@ resource "aws_rds_cluster_instance" "keycloak_serverless_writer" {
 
 # Reader instances (count based on aurora_replica_count, same as Aurora Provisioned)
 resource "aws_rds_cluster_instance" "keycloak_serverless_reader" {
-  count = var.database_type == "aurora-serverless" ? local.aurora_replicas : 0
+  count = local.is_aurora_serverless ? local.aurora_replicas : 0
 
   identifier         = "${var.name}-keycloak-${var.environment}-serverless-reader-${count.index + 1}"
   cluster_identifier = aws_rds_cluster.keycloak[0].id
@@ -390,8 +396,8 @@ resource "aws_secretsmanager_secret_version" "keycloak_db" {
   secret_string = jsonencode({
     username = "keycloak"
     password = random_password.db_password.result
-    host     = var.database_type == "rds" ? aws_db_instance.keycloak[0].address : aws_rds_cluster.keycloak[0].endpoint
-    port     = var.database_type == "rds" ? aws_db_instance.keycloak[0].port : aws_rds_cluster.keycloak[0].port
+    host     = local.is_rds ? aws_db_instance.keycloak[0].address : aws_rds_cluster.keycloak[0].endpoint
+    port     = local.is_rds ? aws_db_instance.keycloak[0].port : aws_rds_cluster.keycloak[0].port
     dbname   = "keycloak"
   })
 }
