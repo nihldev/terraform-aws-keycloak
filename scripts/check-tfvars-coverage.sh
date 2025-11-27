@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# check-tfvars-complete.sh
+# check-tfvars-coverage.sh
 # Validates that terraform.tfvars.example includes all variables defined in variables.tf
 #
 set -euo pipefail

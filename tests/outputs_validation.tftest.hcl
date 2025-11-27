@@ -85,7 +85,7 @@ run "validate_all_outputs" {
   # URL Consistency
   #######################
   assert {
-    condition     = can(regex(output.alb_dns_name, output.keycloak_url))
+    condition     = strcontains(output.keycloak_url, output.alb_dns_name)
     error_message = "Keycloak URL should contain the ALB DNS name"
   }
 }

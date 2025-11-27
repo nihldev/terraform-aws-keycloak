@@ -64,9 +64,32 @@ variable "allowed_cidr_blocks" {
 }
 
 variable "certificate_arn" {
-  description = "ACM certificate ARN for HTTPS listener (optional, will create HTTP listener if not provided)"
+  description = "ACM certificate ARN for HTTPS listener (required for prod, optional for dev/test)"
   type        = string
   default     = ""
+
+  validation {
+    condition = !(
+      var.environment == "prod" &&
+      var.certificate_arn == ""
+    )
+    error_message = <<-EOT
+      SECURITY ERROR: Production environment requires HTTPS.
+
+      Keycloak handles authentication credentials and session tokens.
+      Running over plaintext HTTP in production exposes these to interception.
+
+      Please provide an ACM certificate ARN:
+        certificate_arn = "arn:aws:acm:region:account:certificate/certificate-id"
+
+      To create a certificate:
+        1. Request certificate in ACM for your domain
+        2. Validate domain ownership (DNS or email)
+        3. Use the certificate ARN once issued
+
+      HTTP is only allowed for non-production environments (dev, staging, test).
+    EOT
+  }
 }
 
 variable "alb_access_logs_enabled" {
