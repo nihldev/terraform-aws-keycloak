@@ -66,18 +66,30 @@ jobs:
           pip install yamllint ruff basedpyright
 
       - name: Install additional tools
+        env:
+          GITLEAKS_VERSION: "8.21.2"
+          TERRAFORM_DOCS_VERSION: "0.19.0"
+          CONFTEST_VERSION: "0.56.0"
         run: |
           # Install shellcheck
           sudo apt-get update && sudo apt-get install -y shellcheck
           # Install taplo for TOML linting
-          curl -fsSL https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz | gunzip > /usr/local/bin/taplo
+          TAPLO_URL="https://github.com/tamasfe/taplo/releases/latest/download"
+          curl -fsSL "$TAPLO_URL/taplo-linux-x86_64.gz" | gunzip > /usr/local/bin/taplo
           chmod +x /usr/local/bin/taplo
           # Install gitleaks for secret detection
-          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar xz -C /usr/local/bin gitleaks
+          GITLEAKS_URL="https://github.com/gitleaks/gitleaks/releases/download"
+          curl -fsSL "$GITLEAKS_URL/v$GITLEAKS_VERSION/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar xz -C /usr/local/bin gitleaks
           # Install terraform-docs
-          curl -fsSL https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz | tar xz -C /usr/local/bin terraform-docs
+          TFDOCS_URL="https://github.com/terraform-docs/terraform-docs/releases/download"
+          TFDOCS_FILE="terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
+          curl -fsSL "$TFDOCS_URL/v$TERRAFORM_DOCS_VERSION/$TFDOCS_FILE" \
+            | tar xz -C /usr/local/bin terraform-docs
           # Install conftest for OPA policy testing
-          curl -fsSL https://github.com/open-policy-agent/conftest/releases/download/v0.56.0/conftest_0.56.0_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin conftest
+          CONFTEST_URL="https://github.com/open-policy-agent/conftest/releases/download"
+          curl -fsSL "$CONFTEST_URL/v$CONFTEST_VERSION/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
+            | tar xz -C /usr/local/bin conftest
 
       # Terraform formatting
       - name: Terraform Format Check
@@ -92,10 +104,10 @@ jobs:
       - name: Run actionlint
         run: actionlint -color
 
-      # YAML linting
+      # YAML linting (strict mode: warnings become errors)
       - name: YAML Lint
         run: |
-          yamllint -d relaxed .github/workflows/*.yml
+          yamllint --strict .github/workflows/*.yml
 
       # Check GitHub workflow formatting with prettier
       - name: Check workflow formatting
@@ -117,10 +129,10 @@ jobs:
       - name: Python Type Check (Basedpyright)
         run: basedpyright
 
-      # Shell script linting
+      # Shell script linting (fail on warnings and above)
       - name: Shellcheck
         run: |
-          shellcheck scripts/*.sh
+          shellcheck --severity=warning scripts/*.sh
 
       # TOML linting
       - name: TOML Lint (Taplo)
@@ -136,9 +148,12 @@ jobs:
       # Terraform docs validation
       - name: Terraform Docs Check
         run: |
-          terraform-docs markdown table --output-file README.md --output-mode inject modules/keycloak
+          terraform-docs markdown table \
+            --output-file README.md --output-mode inject modules/keycloak
           if ! git diff --quiet README.md; then
-            echo "Error: README.md is out of date. Run 'terraform-docs markdown table --output-file README.md --output-mode inject modules/keycloak'"
+            echo "Error: README.md is out of date."
+            echo "Run: terraform-docs markdown table --output-file README.md \\"
+            echo "       --output-mode inject modules/keycloak"
             git diff README.md
             exit 1
           fi
@@ -244,12 +259,16 @@ jobs:
 
       - name: Run TFLint
         working-directory: modules/keycloak
-        run: tflint -f compact --config=../../.tflint.hcl
+        run: tflint -f compact --minimum-failure-severity=warning --config=../../.tflint.hcl
 
       # OPA/Conftest policy validation
       - name: Install Conftest
+        env:
+          CONFTEST_VERSION: "0.56.0"
         run: |
-          curl -fsSL https://github.com/open-policy-agent/conftest/releases/download/v0.56.0/conftest_0.56.0_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin conftest
+          CONFTEST_URL="https://github.com/open-policy-agent/conftest/releases/download"
+          curl -fsSL "$CONFTEST_URL/v$CONFTEST_VERSION/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
+            | tar xz -C /usr/local/bin conftest
 
       - name: Run Conftest Policy Checks
         run: |
