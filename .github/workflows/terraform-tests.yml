@@ -13,6 +13,7 @@ on:
       - ".tflint.hcl"
       - ".trivyignore"
   push:
+    branches: [main]
     paths:
       - "modules/keycloak/**"
       - "examples/**"
