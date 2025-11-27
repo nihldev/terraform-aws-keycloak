@@ -257,11 +257,13 @@ jobs:
 
   #######################
   # Plan-Only Tests
+  # Skipped if AWS credentials are not configured
   #######################
   plan-tests:
     name: Plan Tests
     runs-on: ubuntu-latest
     needs: [validation, security-scan]
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
 
     strategy:
       fail-fast: false
@@ -305,11 +307,13 @@ jobs:
 
   #######################
   # Output Validation Tests
+  # Skipped if AWS credentials are not configured
   #######################
   output-tests:
     name: Output Validation
     runs-on: ubuntu-latest
     needs: [validation, security-scan]
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
 
     steps:
       - name: Checkout
@@ -341,11 +345,13 @@ jobs:
 
   #######################
   # Example Validation Tests
+  # Skipped if AWS credentials are not configured
   #######################
   example-tests:
     name: Example Tests
     runs-on: ubuntu-latest
     needs: [validation, security-scan]
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
 
     strategy:
       fail-fast: false
