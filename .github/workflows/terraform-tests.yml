@@ -105,7 +105,7 @@ jobs:
       # Markdown linting
       - name: Markdown Lint
         run: |
-          markdownlint-cli2 "**/*.md" --config .markdownlint.yaml
+          markdownlint-cli2 "**/*.md" "#node_modules" "#.terraform" --config .markdownlint.yaml
 
       # Python linting and formatting
       - name: Python Lint (Ruff)
