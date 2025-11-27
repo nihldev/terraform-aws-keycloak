@@ -28,7 +28,7 @@ mise install
 This installs:
 
 - **Terraform** - Infrastructure as code
-- **pre-commit** - Git hook framework
+- **lefthook** - Git hook framework
 - **tflint** - Terraform linter
 - **trivy** - Security scanner
 - **Terraform-docs** - Documentation generator
@@ -44,7 +44,7 @@ This installs:
 **Important:** The `post_install` hook will automatically:
 
 - Initialize tflint plugins
-- Install pre-commit hooks in your local repository
+- Install lefthook git hooks in your local repository
 
 ### 3. Verify Setup
 
@@ -166,7 +166,7 @@ git push --no-verify
 
 ### Terraform Style
 
-- Use `terraform fmt` for formatting (enforced by pre-commit)
+- Use `terraform fmt` for formatting (enforced by lefthook)
 - Follow [HashiCorp's style guide](https://developer.hashicorp.com/terraform/language/style)
 - Use meaningful variable and resource names
 - Add descriptions to all variables and outputs
@@ -235,11 +235,11 @@ terraform = "1.14.0"
 tflint = "latest"
 
 # Code Quality
-pre-commit = "latest"
+lefthook = "latest"
 
 [tasks.check]
-description = "Run pre-commit checks on all files"
-run = "pre-commit run --all-files"
+description = "Run pre-push checks on all files"
+run = "lefthook run pre-push"
 ```
 
 ### Markdown Style
@@ -331,11 +331,10 @@ If hooks aren't running automatically on push:
 
 ```bash
 # Reinstall hooks
-pre-commit uninstall
-pre-commit install --hook-type pre-push --install-hooks
+lefthook install
 
 # Verify installation
-pre-commit run --hook-stage push --all-files
+lefthook run pre-push
 ```
 
 ### tflint errors
@@ -434,7 +433,7 @@ fix(Keycloak): correct security group egress rules
 
 docs(Keycloak): update usage examples
 
-chore: update pre-commit hooks
+chore: update lefthook configuration
 ```
 
 ## Automated Quality Checks

@@ -6,7 +6,7 @@
 .github/
 
 # Development tools
-.pre-commit-config.yaml
+lefthook.yml
 mise.toml
 .mise.toml
 

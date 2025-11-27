@@ -131,7 +131,7 @@ inputs = {
 
    This automatically installs:
    - Terraform
-   - pre-commit framework (for pre-push hooks)
+   - lefthook (for git hooks)
    - tflint (Terraform linter)
    - trivy (security scanner)
    - Terraform-docs (documentation generator)

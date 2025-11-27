@@ -49,8 +49,8 @@ Thumbs.db
 # Mise/rtx
 .mise.local.toml
 
-# Pre-commit
-.pre-commit-cache/
+# Lefthook
+.lefthook-local.yml
 
 # Claude Code local settings
 .claude/settings.local.json
