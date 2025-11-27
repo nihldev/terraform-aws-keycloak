@@ -2043,3 +2043,226 @@ aws cloudwatch get-metric-statistics \
 ## License
 
 This module is provided as-is under the MIT License.
+
+<!-- markdownlint-disable -->
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.14.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.0 |
+| <a name="requirement_external"></a> [external](#requirement\_external) | ~> 2.3 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.6 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.100.0 |
+| <a name="provider_external"></a> [external](#provider\_external) | 2.3.5 |
+| <a name="provider_random"></a> [random](#provider\_random) | 3.7.2 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_appautoscaling_policy.keycloak_cpu](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/appautoscaling_policy) | resource |
+| [aws_appautoscaling_policy.keycloak_memory](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/appautoscaling_policy) | resource |
+| [aws_appautoscaling_target.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/appautoscaling_target) | resource |
+| [aws_cloudwatch_log_group.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
+| [aws_cloudwatch_metric_alarm.aurora_high_cpu](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.aurora_serverless_high_capacity](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.ecs_high_cpu](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.ecs_high_memory](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.rds_high_cpu](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.rds_low_storage](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.unhealthy_targets](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_db_instance.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance) | resource |
+| [aws_db_parameter_group.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group) | resource |
+| [aws_db_subnet_group.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group) | resource |
+| [aws_ecr_lifecycle_policy.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecr_lifecycle_policy) | resource |
+| [aws_ecr_repository.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecr_repository) | resource |
+| [aws_ecr_repository_policy.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecr_repository_policy) | resource |
+| [aws_ecs_cluster.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_cluster) | resource |
+| [aws_ecs_service.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_service) | resource |
+| [aws_ecs_task_definition.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition) | resource |
+| [aws_iam_access_key.ses_smtp](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_access_key) | resource |
+| [aws_iam_role.ecs_task](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role.ecs_task_execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role_policy.ecs_task_cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy.ecs_task_execution_secrets](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy.ecs_task_secrets](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy_attachment.ecs_task_execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_user.ses_smtp](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_user) | resource |
+| [aws_iam_user_policy.ses_smtp](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_user_policy) | resource |
+| [aws_lb.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb) | resource |
+| [aws_lb_listener.http](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener) | resource |
+| [aws_lb_listener.https](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener) | resource |
+| [aws_lb_target_group.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_target_group) | resource |
+| [aws_rds_cluster.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster) | resource |
+| [aws_rds_cluster_instance.keycloak_reader](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_instance) | resource |
+| [aws_rds_cluster_instance.keycloak_serverless_reader](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_instance) | resource |
+| [aws_rds_cluster_instance.keycloak_serverless_writer](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_instance) | resource |
+| [aws_rds_cluster_instance.keycloak_writer](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_instance) | resource |
+| [aws_rds_cluster_parameter_group.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_parameter_group) | resource |
+| [aws_route53_record.ses_dkim](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
+| [aws_route53_record.ses_verification](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
+| [aws_secretsmanager_secret.keycloak_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
+| [aws_secretsmanager_secret.keycloak_db](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
+| [aws_secretsmanager_secret.ses_smtp](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
+| [aws_secretsmanager_secret_version.keycloak_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
+| [aws_secretsmanager_secret_version.keycloak_db](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
+| [aws_secretsmanager_secret_version.ses_smtp](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
+| [aws_security_group.alb](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [aws_security_group.ecs_tasks](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [aws_security_group.rds](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [aws_security_group_rule.alb_egress_to_ecs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_security_group_rule.alb_ingress_http](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_security_group_rule.alb_ingress_https](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_security_group_rule.ecs_tasks_egress](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_security_group_rule.ecs_tasks_ingress_from_alb](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_security_group_rule.rds_ingress_from_ecs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_ses_configuration_set.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_configuration_set) | resource |
+| [aws_ses_domain_dkim.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_dkim) | resource |
+| [aws_ses_domain_identity.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_identity) | resource |
+| [aws_ses_domain_identity_verification.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_identity_verification) | resource |
+| [aws_ses_email_identity.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_email_identity) | resource |
+| [aws_ses_event_destination.cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_event_destination) | resource |
+| [aws_wafv2_web_acl_association.keycloak](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl_association) | resource |
+| [random_password.db_password](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
+| [random_password.keycloak_admin_password](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
+| [aws_iam_policy_document.ecs_task_assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.ecs_task_cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.ecs_task_execution_assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.ecs_task_execution_secrets](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.ecs_task_secrets](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.ses_send](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
+| [external_external.ses_smtp_password](https://registry.terraform.io/providers/hashicorp/external/latest/docs/data-sources/external) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_alarm_sns_topic_arn"></a> [alarm\_sns\_topic\_arn](#input\_alarm\_sns\_topic\_arn) | SNS topic ARN for CloudWatch alarm notifications. If not provided, alarms will not send notifications. | `string` | `""` | no |
+| <a name="input_alb_access_logs_bucket"></a> [alb\_access\_logs\_bucket](#input\_alb\_access\_logs\_bucket) | S3 bucket name for ALB access logs (required if alb\_access\_logs\_enabled is true) | `string` | `""` | no |
+| <a name="input_alb_access_logs_enabled"></a> [alb\_access\_logs\_enabled](#input\_alb\_access\_logs\_enabled) | Enable ALB access logs | `bool` | `false` | no |
+| <a name="input_alb_access_logs_prefix"></a> [alb\_access\_logs\_prefix](#input\_alb\_access\_logs\_prefix) | S3 bucket prefix for ALB access logs | `string` | `""` | no |
+| <a name="input_alb_deletion_protection"></a> [alb\_deletion\_protection](#input\_alb\_deletion\_protection) | Enable deletion protection for ALB (defaults to true for prod environment) | `bool` | `null` | no |
+| <a name="input_alb_stickiness_duration"></a> [alb\_stickiness\_duration](#input\_alb\_stickiness\_duration) | Duration in seconds for ALB session stickiness cookie (1-604800). Only used when alb\_stickiness\_enabled is true. | `number` | `86400` | no |
+| <a name="input_alb_stickiness_enabled"></a> [alb\_stickiness\_enabled](#input\_alb\_stickiness\_enabled) | Enable session stickiness on the ALB target group.<br/><br/>When enabled, the ALB uses cookies to route requests from the same client<br/>to the same target. This can be useful for:<br/>- Long-running admin operations in Keycloak<br/>- Debugging specific instance behavior<br/>- Scenarios where session affinity is required<br/><br/>Note: Keycloak typically doesn't require stickiness because:<br/>- Sessions are stored in the database<br/>- Distributed cache (jdbc-ping) handles session replication<br/>- All instances can serve any request<br/><br/>Only enable if you have a specific need for session affinity. | `bool` | `false` | no |
+| <a name="input_allowed_cidr_blocks"></a> [allowed\_cidr\_blocks](#input\_allowed\_cidr\_blocks) | CIDR blocks allowed to access Keycloak through ALB | `list(string)` | <pre>[<br/>  "0.0.0.0/0"<br/>]</pre> | no |
+| <a name="input_aurora_backtrack_window"></a> [aurora\_backtrack\_window](#input\_aurora\_backtrack\_window) | Hours to retain backtrack data for Aurora Provisioned (0-72).<br/>Allows rewinding database to any point in time without restore from backup.<br/>Only applies when database\_type = "aurora".<br/><br/>If null (default), automatically sets:<br/>- 24 hours for prod environment<br/>- 0 hours (disabled) for non-prod<br/><br/>Cost: ~$0.012 per million change records/month (typically minimal) | `number` | `null` | no |
+| <a name="input_aurora_replica_count"></a> [aurora\_replica\_count](#input\_aurora\_replica\_count) | Number of Aurora read replicas (0-15).<br/>Applies to both database\_type = "aurora" and "aurora-serverless".<br/><br/>If null (default), automatically creates:<br/>- 1 replica when multi\_az = true<br/>- 0 replicas when multi\_az = false<br/><br/>Set explicitly to override automatic behavior.<br/><br/>Note: Aurora storage is always replicated across 3 AZs. Reader instances<br/>provide read scaling and faster failover, not storage redundancy. | `number` | `null` | no |
+| <a name="input_autoscaling_max_capacity"></a> [autoscaling\_max\_capacity](#input\_autoscaling\_max\_capacity) | Maximum number of tasks for autoscaling (defaults to desired\_count * 3 if not set) | `number` | `null` | no |
+| <a name="input_certificate_arn"></a> [certificate\_arn](#input\_certificate\_arn) | ACM certificate ARN for HTTPS listener (required for prod, optional for dev/test) | `string` | `""` | no |
+| <a name="input_cloudwatch_log_retention_days"></a> [cloudwatch\_log\_retention\_days](#input\_cloudwatch\_log\_retention\_days) | CloudWatch log retention in days (defaults to 30 for prod, 7 for non-prod) | `number` | `null` | no |
+| <a name="input_create_ecr_repository"></a> [create\_ecr\_repository](#input\_create\_ecr\_repository) | Create an ECR repository for custom Keycloak images.<br/>When enabled, the module creates:<br/>- ECR repository with image scanning<br/>- Lifecycle policy to manage image retention<br/>- Repository URL output for pushing images<br/><br/>Note: This only creates the repository. To use it:<br/>1. Apply to create the ECR repository<br/>2. Build and push your custom image to the repository<br/>3. Set keycloak\_image to the ECR URL (available as ecr\_repository\_url output) | `bool` | `false` | no |
+| <a name="input_database_type"></a> [database\_type](#input\_database\_type) | Database type: rds, aurora, or aurora-serverless.<br/><br/>- rds: Standard RDS PostgreSQL (cost-effective, good for most workloads)<br/>- aurora: Aurora Provisioned (better HA, up to 15 read replicas, faster failover)<br/>- aurora-serverless: Aurora Serverless v2 (auto-scaling, ideal for variable workloads) | `string` | `"rds"` | no |
+| <a name="input_db_allocated_storage"></a> [db\_allocated\_storage](#input\_db\_allocated\_storage) | Allocated storage for RDS in GB | `number` | `20` | no |
+| <a name="input_db_backup_retention_period"></a> [db\_backup\_retention\_period](#input\_db\_backup\_retention\_period) | Number of days to retain RDS backups | `number` | `7` | no |
+| <a name="input_db_backup_window"></a> [db\_backup\_window](#input\_db\_backup\_window) | Preferred backup window | `string` | `"03:00-04:00"` | no |
+| <a name="input_db_capacity_max"></a> [db\_capacity\_max](#input\_db\_capacity\_max) | Maximum capacity for Aurora Serverless v2 in ACUs.<br/>Only used when database\_type = "aurora-serverless".<br/>Must be >= db\_capacity\_min. | `number` | `2` | no |
+| <a name="input_db_capacity_min"></a> [db\_capacity\_min](#input\_db\_capacity\_min) | Minimum capacity for Aurora Serverless v2 in ACUs (Aurora Capacity Units).<br/>Only used when database\_type = "aurora-serverless".<br/>Range: 0.5 to 128 ACUs (1 ACU ≈ 2GB RAM)<br/><br/>Examples:<br/>- 0.5: Minimal cost for dev/test<br/>- 2: Light production workload<br/>- 8: Medium production workload | `number` | `0.5` | no |
+| <a name="input_db_deletion_protection"></a> [db\_deletion\_protection](#input\_db\_deletion\_protection) | Enable deletion protection for database (defaults to true for prod environment) | `bool` | `null` | no |
+| <a name="input_db_engine_version"></a> [db\_engine\_version](#input\_db\_engine\_version) | PostgreSQL engine version | `string` | `"16.3"` | no |
+| <a name="input_db_iam_database_authentication_enabled"></a> [db\_iam\_database\_authentication\_enabled](#input\_db\_iam\_database\_authentication\_enabled) | Enable IAM database authentication for RDS | `bool` | `false` | no |
+| <a name="input_db_instance_class"></a> [db\_instance\_class](#input\_db\_instance\_class) | Database instance class for RDS and Aurora Provisioned.<br/>Examples: db.t4g.micro, db.t4g.small, db.r6g.large<br/><br/>Ignored when database\_type = "aurora-serverless" (use db\_capacity\_min/max instead). | `string` | `"db.t4g.micro"` | no |
+| <a name="input_db_kms_key_id"></a> [db\_kms\_key\_id](#input\_db\_kms\_key\_id) | KMS key ID for RDS encryption (uses AWS managed key if not provided) | `string` | `""` | no |
+| <a name="input_db_maintenance_window"></a> [db\_maintenance\_window](#input\_db\_maintenance\_window) | Preferred maintenance window | `string` | `"sun:04:00-sun:05:00"` | no |
+| <a name="input_db_max_allocated_storage"></a> [db\_max\_allocated\_storage](#input\_db\_max\_allocated\_storage) | Maximum allocated storage for RDS autoscaling in GB | `number` | `100` | no |
+| <a name="input_db_parameters"></a> [db\_parameters](#input\_db\_parameters) | Additional PostgreSQL parameters to set in the parameter group.<br/>These are applied in addition to the Keycloak-optimized defaults.<br/><br/>Default parameters (always applied):<br/>- log\_min\_duration\_statement = 1000 (log slow queries > 1s)<br/>- log\_statement = ddl (log schema changes)<br/>- idle\_in\_transaction\_session\_timeout = 600000 (kill idle transactions after 10min)<br/><br/>Example:<br/>db\_parameters = [<br/>  { name = "work\_mem", value = "256MB" },<br/>  { name = "max\_connections", value = "200", apply\_method = "pending-reboot" }<br/>] | <pre>list(object({<br/>    name         = string<br/>    value        = string<br/>    apply_method = optional(string, "immediate")<br/>  }))</pre> | `[]` | no |
+| <a name="input_db_performance_insights_retention_period"></a> [db\_performance\_insights\_retention\_period](#input\_db\_performance\_insights\_retention\_period) | Performance Insights retention period in days.<br/><br/>If null (default), automatically sets:<br/>- 31 days for Aurora in prod environment<br/>- 7 days for RDS or non-prod<br/><br/>Valid values: 7, 31, 62, 93, 124, 155, 186, 217, 248, 279, 310, 341, 372,<br/>403, 434, 465, 496, 527, 558, 589, 620, 651, 682, 713, 731 | `number` | `null` | no |
+| <a name="input_db_pool_initial_size"></a> [db\_pool\_initial\_size](#input\_db\_pool\_initial\_size) | Initial size of database connection pool | `number` | `5` | no |
+| <a name="input_db_pool_max_size"></a> [db\_pool\_max\_size](#input\_db\_pool\_max\_size) | Maximum size of database connection pool per Keycloak instance.<br/><br/>IMPORTANT: Calculate total connections carefully:<br/>Total connections = desired\_count * db\_pool\_max\_size<br/><br/>This must be LESS than your RDS max\_connections setting:<br/>- db.t4g.micro:  ~85 connections available<br/>- db.t4g.small:  ~410 connections available<br/>- db.t4g.medium: ~820 connections available<br/>- db.r6g.large:  ~1000 connections available<br/><br/>Examples:<br/>- desired\_count=2, db\_pool\_max\_size=20 → 40 total (safe for db.t4g.micro)<br/>- desired\_count=3, db\_pool\_max\_size=30 → 90 total (requires at least db.t4g.small)<br/>- desired\_count=10, db\_pool\_max\_size=20 → 200 total (requires at least db.t4g.small)<br/><br/>Leave ~20% headroom for administrative connections and connection spikes. | `number` | `20` | no |
+| <a name="input_db_pool_min_size"></a> [db\_pool\_min\_size](#input\_db\_pool\_min\_size) | Minimum size of database connection pool | `number` | `5` | no |
+| <a name="input_db_skip_final_snapshot"></a> [db\_skip\_final\_snapshot](#input\_db\_skip\_final\_snapshot) | Skip final snapshot when destroying RDS instance | `bool` | `false` | no |
+| <a name="input_desired_count"></a> [desired\_count](#input\_desired\_count) | Number of Keycloak tasks to run | `number` | `2` | no |
+| <a name="input_ecr_allowed_account_ids"></a> [ecr\_allowed\_account\_ids](#input\_ecr\_allowed\_account\_ids) | List of AWS account IDs allowed to pull images from this ECR repository.<br/>Useful for cross-account deployments.<br/>Leave empty for same-account only access. | `list(string)` | `[]` | no |
+| <a name="input_ecr_image_retention_count"></a> [ecr\_image\_retention\_count](#input\_ecr\_image\_retention\_count) | Number of tagged images to retain in ECR (older images are deleted) | `number` | `30` | no |
+| <a name="input_ecr_image_tag_mutability"></a> [ecr\_image\_tag\_mutability](#input\_ecr\_image\_tag\_mutability) | Image tag mutability setting for ECR repository.<br/>- MUTABLE: Tags can be overwritten (convenient for dev)<br/>- IMMUTABLE: Tags cannot be overwritten (recommended for prod) | `string` | `"MUTABLE"` | no |
+| <a name="input_ecr_image_tag_prefixes"></a> [ecr\_image\_tag\_prefixes](#input\_ecr\_image\_tag\_prefixes) | Tag prefixes for ECR lifecycle policy retention.<br/>Images with tags matching these prefixes will be retained (up to ecr\_image\_retention\_count).<br/>Common prefixes: "v" (versions), "release", environment names. | `list(string)` | <pre>[<br/>  "v",<br/>  "release",<br/>  "prod",<br/>  "staging",<br/>  "dev"<br/>]</pre> | no |
+| <a name="input_ecr_kms_key_id"></a> [ecr\_kms\_key\_id](#input\_ecr\_kms\_key\_id) | KMS key ID for ECR image encryption.<br/>If empty, uses default AES256 encryption.<br/>If provided, uses KMS encryption with the specified key. | `string` | `""` | no |
+| <a name="input_ecr_scan_on_push"></a> [ecr\_scan\_on\_push](#input\_ecr\_scan\_on\_push) | Enable vulnerability scanning when images are pushed to ECR | `bool` | `true` | no |
+| <a name="input_enable_container_insights"></a> [enable\_container\_insights](#input\_enable\_container\_insights) | Enable CloudWatch Container Insights for ECS cluster | `bool` | `true` | no |
+| <a name="input_enable_ses"></a> [enable\_ses](#input\_enable\_ses) | Enable SES integration for Keycloak email functionality.<br/>When enabled, creates:<br/>- SES domain identity with DKIM<br/>- IAM user for SMTP credentials<br/>- Secrets Manager secret with SMTP configuration<br/><br/>Note: SES starts in sandbox mode. You must request production access<br/>to send emails to non-verified addresses. | `bool` | `false` | no |
+| <a name="input_environment"></a> [environment](#input\_environment) | Environment name (e.g., dev, staging, prod) | `string` | n/a | yes |
+| <a name="input_health_check_grace_period_seconds"></a> [health\_check\_grace\_period\_seconds](#input\_health\_check\_grace\_period\_seconds) | Health check grace period for ECS service (600 recommended for initial deployments) | `number` | `600` | no |
+| <a name="input_health_check_path"></a> [health\_check\_path](#input\_health\_check\_path) | Health check path for ALB target group. Default is Keycloak's standard health endpoint. | `string` | `"/health/ready"` | no |
+| <a name="input_keycloak_admin_username"></a> [keycloak\_admin\_username](#input\_keycloak\_admin\_username) | Keycloak admin username | `string` | `"admin"` | no |
+| <a name="input_keycloak_cache_enabled"></a> [keycloak\_cache\_enabled](#input\_keycloak\_cache\_enabled) | Enable distributed cache for multi-instance deployments (required when desired\_count > 1) | `bool` | `true` | no |
+| <a name="input_keycloak_cache_stack"></a> [keycloak\_cache\_stack](#input\_keycloak\_cache\_stack) | Cache stack protocol for Keycloak clustering. Use 'jdbc-ping' for ECS deployments.<br/><br/>Options:<br/>- jdbc-ping: Database-based discovery (recommended for ECS/Fargate)<br/>- tcp: TCP-based discovery (requires multicast or known hosts)<br/>- udp: UDP multicast discovery (not supported in most cloud VPCs)<br/><br/>Note: 'kubernetes' stack is not supported as this module deploys to ECS, not EKS. | `string` | `"jdbc-ping"` | no |
+| <a name="input_keycloak_extra_env_vars"></a> [keycloak\_extra\_env\_vars](#input\_keycloak\_extra\_env\_vars) | Additional environment variables for Keycloak container | `map(string)` | `{}` | no |
+| <a name="input_keycloak_hostname"></a> [keycloak\_hostname](#input\_keycloak\_hostname) | Keycloak hostname (required for production deployments) | `string` | `""` | no |
+| <a name="input_keycloak_image"></a> [keycloak\_image](#input\_keycloak\_image) | Custom Keycloak Docker image URI.<br/>Use this to deploy a custom Keycloak image with themes, providers, or extensions.<br/><br/>Examples:<br/>- ECR: "123456789.dkr.ecr.us-east-1.amazonaws.com/keycloak:v1.0.0"<br/>- Docker Hub: "myorg/keycloak-custom:latest"<br/><br/>If empty (default), uses the official Keycloak image from quay.io.<br/><br/>To use ECR: Set this to the ECR repository URL from the module output,<br/>e.g., keycloak\_image = module.keycloak.ecr\_repository\_url | `string` | `""` | no |
+| <a name="input_keycloak_loglevel"></a> [keycloak\_loglevel](#input\_keycloak\_loglevel) | Keycloak log level (INFO, DEBUG, WARN, ERROR) | `string` | `"INFO"` | no |
+| <a name="input_keycloak_version"></a> [keycloak\_version](#input\_keycloak\_version) | Keycloak version to deploy | `string` | `"26.0"` | no |
+| <a name="input_multi_az"></a> [multi\_az](#input\_multi\_az) | Enable multi-AZ deployment for high availability.<br/><br/>Behavior by database type:<br/>- RDS: Creates a synchronous standby replica in another AZ (true Multi-AZ)<br/>- Aurora: Sets default for aurora\_replica\_count to 1 (creates a reader instance)<br/>          Note: Aurora storage is ALWAYS replicated across 3 AZs regardless of this setting.<br/><br/>For Aurora, prefer using 'aurora\_replica\_count' directly for explicit control. | `bool` | `false` | no |
+| <a name="input_name"></a> [name](#input\_name) | Name prefix for all resources | `string` | n/a | yes |
+| <a name="input_private_subnet_ids"></a> [private\_subnet\_ids](#input\_private\_subnet\_ids) | Private subnet IDs for ECS tasks and RDS | `list(string)` | n/a | yes |
+| <a name="input_public_subnet_ids"></a> [public\_subnet\_ids](#input\_public\_subnet\_ids) | Public subnet IDs for Application Load Balancer | `list(string)` | n/a | yes |
+| <a name="input_secrets_kms_key_id"></a> [secrets\_kms\_key\_id](#input\_secrets\_kms\_key\_id) | KMS key ID for Secrets Manager encryption (uses AWS managed key if not provided) | `string` | `""` | no |
+| <a name="input_ses_configuration_set_enabled"></a> [ses\_configuration\_set\_enabled](#input\_ses\_configuration\_set\_enabled) | Enable SES Configuration Set for email tracking and metrics.<br/>Creates CloudWatch metrics for:<br/>- Send, reject, bounce, complaint events<br/>- Delivery, open, click tracking<br/><br/>Useful for monitoring email deliverability. | `bool` | `false` | no |
+| <a name="input_ses_domain"></a> [ses\_domain](#input\_ses\_domain) | Domain to use for sending emails via SES.<br/>This domain will be verified with SES and DKIM will be configured.<br/>Required if enable\_ses = true.<br/>Example: "example.com" or "mail.example.com" | `string` | `""` | no |
+| <a name="input_ses_email_identity"></a> [ses\_email\_identity](#input\_ses\_email\_identity) | Optional: Specific email address to verify instead of (or in addition to) domain.<br/>Useful for testing in SES sandbox mode without domain verification.<br/>Example: "noreply@example.com" | `string` | `""` | no |
+| <a name="input_ses_from_email"></a> [ses\_from\_email](#input\_ses\_from\_email) | Email address to use as the 'From' address for Keycloak emails.<br/>Must be from the verified domain or verified email identity.<br/>Defaults to "noreply@{ses\_domain}" if not specified.<br/>Example: "keycloak@example.com" or "noreply@example.com" | `string` | `""` | no |
+| <a name="input_ses_route53_zone_id"></a> [ses\_route53\_zone\_id](#input\_ses\_route53\_zone\_id) | Route53 hosted zone ID for automatic DNS record creation.<br/>If provided, the module will automatically create:<br/>- TXT record for domain verification<br/>- CNAME records for DKIM<br/><br/>If not provided, you must manually create these DNS records.<br/>The required records will be available in the outputs. | `string` | `""` | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags for all resources | `map(string)` | `{}` | no |
+| <a name="input_task_cpu"></a> [task\_cpu](#input\_task\_cpu) | CPU units for Keycloak task (1024 = 1 vCPU) | `number` | `1024` | no |
+| <a name="input_task_memory"></a> [task\_memory](#input\_task\_memory) | Memory for Keycloak task in MB | `number` | `2048` | no |
+| <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | VPC ID where resources will be created | `string` | n/a | yes |
+| <a name="input_waf_acl_arn"></a> [waf\_acl\_arn](#input\_waf\_acl\_arn) | ARN of AWS WAF WebACL to associate with ALB (STRONGLY RECOMMENDED for production environments to protect against web exploits, DDoS, and credential stuffing attacks) | `string` | `""` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_admin_credentials_secret_arn"></a> [admin\_credentials\_secret\_arn](#output\_admin\_credentials\_secret\_arn) | ARN of the Secrets Manager secret containing Keycloak admin credentials |
+| <a name="output_admin_credentials_secret_id"></a> [admin\_credentials\_secret\_id](#output\_admin\_credentials\_secret\_id) | Secret ID for retrieving admin credentials (use with AWS CLI: aws secretsmanager get-secret-value --secret-id <this-value>) |
+| <a name="output_alb_arn"></a> [alb\_arn](#output\_alb\_arn) | ARN of the Application Load Balancer |
+| <a name="output_alb_dns_name"></a> [alb\_dns\_name](#output\_alb\_dns\_name) | DNS name of the Application Load Balancer |
+| <a name="output_alb_security_group_id"></a> [alb\_security\_group\_id](#output\_alb\_security\_group\_id) | ID of the ALB security group |
+| <a name="output_alb_zone_id"></a> [alb\_zone\_id](#output\_alb\_zone\_id) | Zone ID of the Application Load Balancer (for Route53 alias records) |
+| <a name="output_cloudwatch_log_group_arn"></a> [cloudwatch\_log\_group\_arn](#output\_cloudwatch\_log\_group\_arn) | ARN of the CloudWatch log group |
+| <a name="output_cloudwatch_log_group_name"></a> [cloudwatch\_log\_group\_name](#output\_cloudwatch\_log\_group\_name) | Name of the CloudWatch log group |
+| <a name="output_cost_warning"></a> [cost\_warning](#output\_cost\_warning) | Cost optimization recommendations |
+| <a name="output_database_type"></a> [database\_type](#output\_database\_type) | Type of database deployed (rds, aurora, or aurora-serverless) |
+| <a name="output_db_credentials_secret_arn"></a> [db\_credentials\_secret\_arn](#output\_db\_credentials\_secret\_arn) | ARN of the Secrets Manager secret containing database credentials |
+| <a name="output_db_credentials_secret_id"></a> [db\_credentials\_secret\_id](#output\_db\_credentials\_secret\_id) | Secret ID for retrieving database credentials (use with AWS CLI: aws secretsmanager get-secret-value --secret-id <this-value>) |
+| <a name="output_db_instance_address"></a> [db\_instance\_address](#output\_db\_instance\_address) | Address of the database endpoint |
+| <a name="output_db_instance_arn"></a> [db\_instance\_arn](#output\_db\_instance\_arn) | ARN of the database instance or cluster |
+| <a name="output_db_instance_endpoint"></a> [db\_instance\_endpoint](#output\_db\_instance\_endpoint) | Connection endpoint for the database |
+| <a name="output_db_instance_id"></a> [db\_instance\_id](#output\_db\_instance\_id) | ID of the database instance or cluster |
+| <a name="output_db_name"></a> [db\_name](#output\_db\_name) | Name of the database |
+| <a name="output_db_reader_endpoint"></a> [db\_reader\_endpoint](#output\_db\_reader\_endpoint) | Reader endpoint for Aurora cluster (empty for RDS) |
+| <a name="output_ecr_push_commands"></a> [ecr\_push\_commands](#output\_ecr\_push\_commands) | Commands to authenticate and push images to ECR |
+| <a name="output_ecr_repository_arn"></a> [ecr\_repository\_arn](#output\_ecr\_repository\_arn) | ARN of the ECR repository (empty if not created) |
+| <a name="output_ecr_repository_name"></a> [ecr\_repository\_name](#output\_ecr\_repository\_name) | Name of the ECR repository (empty if not created) |
+| <a name="output_ecr_repository_url"></a> [ecr\_repository\_url](#output\_ecr\_repository\_url) | ECR repository URL for pushing custom images (empty if not created) |
+| <a name="output_ecs_cluster_id"></a> [ecs\_cluster\_id](#output\_ecs\_cluster\_id) | ID of the ECS cluster |
+| <a name="output_ecs_cluster_name"></a> [ecs\_cluster\_name](#output\_ecs\_cluster\_name) | Name of the ECS cluster |
+| <a name="output_ecs_service_id"></a> [ecs\_service\_id](#output\_ecs\_service\_id) | ID of the ECS service |
+| <a name="output_ecs_service_name"></a> [ecs\_service\_name](#output\_ecs\_service\_name) | Name of the ECS service |
+| <a name="output_ecs_task_definition_arn"></a> [ecs\_task\_definition\_arn](#output\_ecs\_task\_definition\_arn) | ARN of the ECS task definition |
+| <a name="output_ecs_tasks_security_group_id"></a> [ecs\_tasks\_security\_group\_id](#output\_ecs\_tasks\_security\_group\_id) | ID of the ECS tasks security group |
+| <a name="output_keycloak_admin_console_url"></a> [keycloak\_admin\_console\_url](#output\_keycloak\_admin\_console\_url) | URL to access Keycloak admin console |
+| <a name="output_keycloak_image"></a> [keycloak\_image](#output\_keycloak\_image) | The Keycloak Docker image being used (official or custom) |
+| <a name="output_keycloak_url"></a> [keycloak\_url](#output\_keycloak\_url) | URL to access Keycloak (use this to access the admin console) |
+| <a name="output_rds_security_group_id"></a> [rds\_security\_group\_id](#output\_rds\_security\_group\_id) | ID of the RDS security group |
+| <a name="output_ses_configuration_set_name"></a> [ses\_configuration\_set\_name](#output\_ses\_configuration\_set\_name) | SES Configuration Set name for email tracking (empty if not enabled) |
+| <a name="output_ses_dkim_tokens"></a> [ses\_dkim\_tokens](#output\_ses\_dkim\_tokens) | DKIM tokens for email authentication (add CNAME records to DNS if not using Route53) |
+| <a name="output_ses_dns_records_required"></a> [ses\_dns\_records\_required](#output\_ses\_dns\_records\_required) | DNS records required for SES verification (only shown if Route53 zone not provided) |
+| <a name="output_ses_domain_identity_arn"></a> [ses\_domain\_identity\_arn](#output\_ses\_domain\_identity\_arn) | ARN of the SES domain identity (empty if SES not enabled) |
+| <a name="output_ses_domain_verification_token"></a> [ses\_domain\_verification\_token](#output\_ses\_domain\_verification\_token) | TXT record value for SES domain verification (add to DNS if not using Route53) |
+| <a name="output_ses_from_email"></a> [ses\_from\_email](#output\_ses\_from\_email) | Email address configured for sending (use in Keycloak realm settings) |
+| <a name="output_ses_smtp_credentials_secret_arn"></a> [ses\_smtp\_credentials\_secret\_arn](#output\_ses\_smtp\_credentials\_secret\_arn) | ARN of the Secrets Manager secret containing SMTP credentials |
+| <a name="output_ses_smtp_credentials_secret_id"></a> [ses\_smtp\_credentials\_secret\_id](#output\_ses\_smtp\_credentials\_secret\_id) | Secret ID for retrieving SMTP credentials (use: aws secretsmanager get-secret-value --secret-id <this-value>) |
+| <a name="output_ses_smtp_endpoint"></a> [ses\_smtp\_endpoint](#output\_ses\_smtp\_endpoint) | SES SMTP endpoint for Keycloak email configuration |
+| <a name="output_target_group_arn"></a> [target\_group\_arn](#output\_target\_group\_arn) | ARN of the target group |
+<!-- END_TF_DOCS -->
+<!-- markdownlint-enable -->
