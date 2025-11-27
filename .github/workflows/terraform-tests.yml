@@ -253,7 +253,7 @@ jobs:
 
       - name: Run Conftest Policy Checks
         run: |
-          conftest test --policy policy/ modules/ --all-namespaces || true
+          conftest test --policy policy/ modules/ --all-namespaces
 
   #######################
   # Plan-Only Tests

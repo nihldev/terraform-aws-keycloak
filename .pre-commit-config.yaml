@@ -147,7 +147,7 @@ repos:
       - id: conftest-policy-check
         name: Conftest policy validation
         description: Validate Terraform modules with custom OPA policies
-        entry: bash -c 'conftest test --policy policy/ modules/ --all-namespaces || true'
+        entry: bash -c 'conftest test --policy policy/ modules/ --all-namespaces'
         language: system
         files: '\.tf$'
         stages: [pre-push]
