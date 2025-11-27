@@ -233,238 +233,38 @@ db_capacity_max = 4    # Maximum ACUs
 
 ## Usage
 
-### Basic Example (Development)
+See the [examples](../../examples/) directory for complete, working configurations:
+
+| Example | Description | Database | Cost |
+| ------- | ----------- | -------- | ---- |
+| [basic](../../examples/basic/) | Minimal dev/test deployment | RDS PostgreSQL | ~$50-70/mo |
+| [complete](../../examples/complete/) | Production-ready with HTTPS | RDS PostgreSQL | ~$80-400/mo |
+| [aurora-provisioned](../../examples/aurora-provisioned/) | High availability, read replicas | Aurora | ~$400-900/mo |
+| [aurora-serverless](../../examples/aurora-serverless/) | Auto-scaling for variable workloads | Aurora Serverless v2 | ~$40-800/mo |
+| [ses-email](../../examples/ses-email/) | With SES email integration | RDS PostgreSQL | ~$80-400/mo |
+
+### Quick Start
 
 ```hcl
 module "keycloak" {
-  source = "./modules/keycloak"
+  source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=main"
 
   name        = "myapp"
   environment = "dev"
 
-  # Networking
   vpc_id             = "vpc-xxxxx"
   public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy"]
   private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb"]
-
-  # Basic configuration for development
-  multi_az       = false
-  desired_count  = 1
-
-  tags = {
-    Project = "MyApp"
-    Team    = "Platform"
-  }
 }
 ```
 
-### Production Example
+### Custom Domain (Route53)
+
+To use HTTPS with a custom domain, create an ACM certificate and Route53 record:
 
 ```hcl
 module "keycloak" {
-  source = "./modules/keycloak"
-
-  name        = "myapp"
-  environment = "prod"
-
-  # Networking
-  vpc_id             = "vpc-xxxxx"
-  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy", "subnet-zzzzz"]
-  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb", "subnet-ccccc"]
-
-  # HTTPS with custom domain
-  certificate_arn    = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
-  keycloak_hostname  = "auth.example.com"
-
-  # High availability
-  multi_az      = true
-  desired_count = 3
-
-  # Enhanced capacity
-  task_cpu    = 2048
-  task_memory = 4096
-
-  # Production database
-  db_instance_class          = "db.r6g.large"
-  db_allocated_storage       = 100
-  db_backup_retention_period = 30
-  db_deletion_protection     = true
-
-  tags = {
-    Project     = "MyApp"
-    Team        = "Platform"
-    Environment = "Production"
-  }
-}
-```
-
-### Aurora Provisioned Example (High Availability)
-
-```hcl
-module "keycloak" {
-  source = "./modules/keycloak"
-
-  name        = "myapp"
-  environment = "prod"
-
-  # Networking
-  vpc_id             = "vpc-xxxxx"
-  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy", "subnet-zzzzz"]
-  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb", "subnet-ccccc"]
-
-  # Aurora Provisioned for enhanced HA
-  database_type     = "aurora"
-  db_instance_class = "db.r6g.large"
-
-  # High availability with read replicas
-  multi_az = true  # Automatically creates 1 read replica
-  # OR explicitly set: aurora_replica_count = 2  # For 2 read replicas
-
-  # Aurora-specific features
-  aurora_backtrack_window = 24  # 24 hours of backtrack (auto-enabled for prod)
-
-  # HTTPS with custom domain
-  certificate_arn   = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
-  keycloak_hostname = "auth.example.com"
-
-  # ECS scaling
-  desired_count = 3
-  task_cpu      = 2048
-  task_memory   = 4096
-
-  # Backup configuration
-  db_backup_retention_period = 30
-  db_deletion_protection     = true
-
-  tags = {
-    Project     = "MyApp"
-    Team        = "Platform"
-    Environment = "Production"
-  }
-}
-
-# Access Aurora reader endpoint for read-only queries
-output "aurora_reader_endpoint" {
-  value = module.Keycloak.db_reader_endpoint
-}
-```
-
-### Aurora Serverless v2 Example (Variable Workload)
-
-```hcl
-module "keycloak" {
-  source = "./modules/keycloak"
-
-  name        = "myapp"
-  environment = "dev"
-
-  # Networking
-  vpc_id             = "vpc-xxxxx"
-  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy"]
-  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb"]
-
-  # Aurora Serverless v2 for auto-scaling
-  database_type   = "aurora-serverless"
-  db_capacity_min = 0.5  # Scales down to 0.5 ACU when idle
-  db_capacity_max = 4    # Scales up to 4 ACU during peak load
-
-  # Dev configuration
-  multi_az      = false
-  desired_count = 1
-  task_cpu      = 512
-  task_memory   = 1024
-
-  tags = {
-    Project     = "MyApp"
-    Environment = "Development"
-  }
-}
-
-# Check for cost warnings
-output "cost_warning" {
-  value = module.Keycloak.cost_warning
-}
-```
-
-### Aurora Serverless v2 Example (Production with Auto-Scaling)
-
-```hcl
-module "keycloak" {
-  source = "./modules/keycloak"
-
-  name        = "myapp"
-  environment = "prod"
-
-  # Networking
-  vpc_id             = "vpc-xxxxx"
-  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy", "subnet-zzzzz"]
-  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb", "subnet-ccccc"]
-
-  # Aurora Serverless v2 for unpredictable workload
-  database_type   = "aurora-serverless"
-  db_capacity_min = 2   # Minimum 2 ACU (baseline)
-  db_capacity_max = 16  # Scale up to 16 ACU during authentication spikes
-
-  # HTTPS
-  certificate_arn   = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
-  keycloak_hostname = "auth.example.com"
-
-  # Production ECS
-  multi_az      = true
-  desired_count = 3
-  task_cpu      = 2048
-  task_memory   = 4096
-
-  # Backup configuration
-  db_backup_retention_period = 30
-  db_deletion_protection     = true
-
-  tags = {
-    Project     = "MyApp"
-    Environment = "Production"
-  }
-}
-```
-
-### With Custom Domain (Route53)
-
-```hcl
-# Request ACM certificate
-resource "aws_acm_certificate" "Keycloak" {
-  domain_name       = "auth.example.com"
-  validation_method = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Create Route53 record for validation
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.Keycloak.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  zone_id = var.route53_zone_id
-  name    = each.value.name
-  type    = each.value.type
-  records = [each.value.record]
-  ttl     = 60
-}
-
-# Wait for certificate validation
-resource "aws_acm_certificate_validation" "Keycloak" {
-  certificate_arn         = aws_acm_certificate.Keycloak.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
-
-# Deploy Keycloak
-module "keycloak" {
-  source = "./modules/keycloak"
+  source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=main"
 
   name        = "myapp"
   environment = "prod"
@@ -473,26 +273,28 @@ module "keycloak" {
   public_subnet_ids  = var.public_subnet_ids
   private_subnet_ids = var.private_subnet_ids
 
-  certificate_arn   = aws_acm_certificate.Keycloak.arn
+  certificate_arn   = aws_acm_certificate.keycloak.arn
   keycloak_hostname = "auth.example.com"
 
   multi_az      = true
   desired_count = 2
 }
 
-# Create DNS record pointing to ALB
-resource "aws_route53_record" "Keycloak" {
+# Create Route53 alias record pointing to ALB
+resource "aws_route53_record" "keycloak" {
   zone_id = var.route53_zone_id
   name    = "auth.example.com"
   type    = "A"
 
   alias {
-    name                   = module.Keycloak.alb_dns_name
-    zone_id                = module.Keycloak.alb_zone_id
+    name                   = module.keycloak.alb_dns_name
+    zone_id                = module.keycloak.alb_zone_id
     evaluate_target_health = true
   }
 }
 ```
+
+See the [complete example](../../examples/complete/) for full ACM certificate setup.
 
 ## Email Configuration (SES)
 
@@ -594,35 +396,7 @@ After deployment, configure each Keycloak realm to use SES SMTP:
    - Click "Test Connection" in Keycloak
    - Send a test email to verify configuration
 
-### SES Configuration Examples
-
-#### Development (Sandbox Testing)
-
-```hcl
-# For testing without domain verification
-enable_ses         = true
-ses_domain         = "example.com"
-ses_email_identity = "developer@example.com"  # Verify this specific email
-```
-
-#### Production with Route53
-
-```hcl
-enable_ses                    = true
-ses_domain                    = "mail.example.com"
-ses_from_email                = "noreply@mail.example.com"
-ses_route53_zone_id           = data.aws_route53_zone.main.zone_id
-ses_configuration_set_enabled = true  # Enable delivery tracking
-```
-
-#### Production with External DNS
-
-```hcl
-enable_ses     = true
-ses_domain     = "example.com"
-ses_from_email = "keycloak@example.com"
-# No ses_route53_zone_id - manually create DNS records from output
-```
+For complete SES configuration examples, see the [ses-email example](../../examples/ses-email/).
 
 ### Monitoring Email Delivery
 
@@ -1463,98 +1237,20 @@ aws logs filter-log-events \
 
 ## Cost Optimization
 
-### Development/Testing (RDS - Most Cost-Effective)
+| Configuration | Database | Monthly Cost | Example |
+| ------------- | -------- | ------------ | ------- |
+| **Dev (Minimal)** | RDS | ~$50-80 | [basic](../../examples/basic/) |
+| **Dev (Scaling)** | Aurora Serverless | ~$40-100 | [aurora-serverless](../../examples/aurora-serverless/) |
+| **Prod (Standard)** | RDS | ~$300-500 | [complete](../../examples/complete/) |
+| **Prod (HA)** | Aurora | ~$600-900 | [aurora-provisioned](../../examples/aurora-provisioned/) |
+| **Prod (Variable)** | Aurora Serverless | ~$200-800 | [aurora-serverless](../../examples/aurora-serverless/) |
 
-```hcl
-database_type              = "rds"  # Default, most cost-effective
-multi_az                   = false
-desired_count              = 1
-task_cpu                   = 512
-task_memory                = 1024
-db_instance_class          = "db.t4g.micro"
-db_backup_retention_period = 1
-```
+**Cost reduction tips:**
 
-Estimated cost: ~$50-80/month
-
----
-
-### Development/Testing (Aurora Serverless - Auto-Scaling)
-
-```hcl
-database_type              = "aurora-serverless"
-db_capacity_min            = 0.5  # Scales to near-zero when idle
-db_capacity_max            = 2
-multi_az                   = false
-desired_count              = 1
-task_cpu                   = 512
-task_memory                = 1024
-db_backup_retention_period = 1
-```
-
-Estimated cost: ~$40-100/month (depends on usage pattern, scales to near-zero when idle)
-
----
-
-### Production (RDS - Balanced)
-
-```hcl
-database_type              = "rds"
-multi_az                   = true
-desired_count              = 3
-task_cpu                   = 1024
-task_memory                = 2048
-db_instance_class          = "db.r6g.large"
-db_backup_retention_period = 30
-```
-
-Estimated cost: ~$300-500/month
-
----
-
-### Production (Aurora Provisioned - High Availability)
-
-```hcl
-database_type              = "aurora"
-multi_az                   = true  # Creates 1 read replica automatically
-desired_count              = 3
-task_cpu                   = 1024
-task_memory                = 2048
-db_instance_class          = "db.r6g.large"
-aurora_backtrack_window    = 24  # Time-travel feature
-db_backup_retention_period = 30
-```
-
-Estimated cost: ~$600-900/month (includes writer + 1 reader)
-
----
-
-### Production (Aurora Serverless - Variable Workload)
-
-```hcl
-database_type              = "aurora-serverless"
-db_capacity_min            = 2   # Baseline capacity
-db_capacity_max            = 16  # Scale during spikes
-multi_az                   = true
-desired_count              = 3
-task_cpu                   = 1024
-task_memory                = 2048
-db_backup_retention_period = 30
-```
-
-Estimated cost: ~$200-800/month (depends on load patterns)
-
----
-
-### Cost Comparison Summary
-
-| Configuration | Database Type | Monthly Cost | Best For |
-| ------------- | ------------- | ------------ | -------- |
-| **Dev (Minimal)** | RDS | ~$50-80 | Consistent low usage |
-| **Dev (Scaling)** | Aurora Serverless | ~$40-100 | Variable/idle periods |
-| **Prod (Standard)** | RDS | ~$300-500 | Most production use cases |
-| **Prod (HA)** | Aurora Provisioned | ~$600-900 | Mission-critical, read-heavy |
-| **Prod (Variable)** | Aurora Serverless | ~$200-800 | Unpredictable patterns |
+- Use `multi_az = false` for non-production
+- Reduce `desired_count` to 1 for dev/test
+- Use smaller instances (`db.t4g.micro`, `task_cpu = 512`)
+- For Aurora Serverless, set low `db_capacity_min` (0.5) to scale down when idle
 
 ## Security Considerations
 

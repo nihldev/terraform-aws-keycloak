@@ -24,8 +24,7 @@ Deploy Keycloak identity and access management system on AWS with ECS Fargate, R
 
 ```hcl
 module "keycloak" {
-  source  = "nihldev/keycloak/aws"
-  version = "~> 1.0"
+  source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=main"
 
   name        = "myapp"
   environment = "prod"
@@ -39,26 +38,16 @@ module "keycloak" {
 }
 ```
 
-<details>
-<summary>Alternative: Using Git source</summary>
+Once published to the Terraform Registry, you can use:
 
 ```hcl
 module "keycloak" {
-  source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=v1.0.0"
+  source  = "nihldev/keycloak/aws"
+  version = "~> 1.0"
 
-  name        = "myapp"
-  environment = "prod"
-
-  vpc_id             = "vpc-xxxxx"
-  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy"]
-  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb"]
-
-  multi_az      = true
-  desired_count = 3
+  # ... same configuration as above
 }
 ```
-
-</details>
 
 ## Usage with infra-live
 
@@ -67,7 +56,7 @@ Reference these modules in your `infra-live` repository:
 ```hcl
 # infra-live/prod/us-east-1/keycloak/terragrunt.hcl
 terraform {
-  source = "tfr:///nihldev/keycloak/aws?version=~>1.0"
+  source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=main"
 }
 
 inputs = {
@@ -83,29 +72,13 @@ inputs = {
 }
 ```
 
-<details>
-<summary>Alternative: Using Git source with Terragrunt</summary>
+Once published to the Terraform Registry:
 
 ```hcl
-# infra-live/prod/us-east-1/keycloak/terragrunt.hcl
 terraform {
-  source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=v1.0.0"
-}
-
-inputs = {
-  name        = "myapp"
-  environment = "prod"
-
-  vpc_id             = dependency.vpc.outputs.vpc_id
-  public_subnet_ids  = dependency.vpc.outputs.public_subnets
-  private_subnet_ids = dependency.vpc.outputs.private_subnets
-
-  multi_az      = true
-  desired_count = 3
+  source = "tfr:///nihldev/keycloak/aws?version=~>1.0"
 }
 ```
-
-</details>
 
 ## Development
 
@@ -291,10 +264,17 @@ See [tests/README.md](tests/README.md) for detailed testing documentation.
 
 ### Versioning
 
-- Use semantic versioning (MAJOR.MINOR.PATCH)
-- Tag releases in Git
-- Document breaking changes in release notes
-- Maintain backwards compatibility when possible
+This module follows semantic versioning (MAJOR.MINOR.PATCH):
+
+- **MAJOR**: Breaking changes requiring configuration updates
+- **MINOR**: New features, backwards compatible
+- **PATCH**: Bug fixes, backwards compatible
+
+Once published, pin to a specific version in production:
+
+```hcl
+version = "~> 1.0"  # Allows 1.x updates, not 2.0
+```
 
 ## Contributing
 
