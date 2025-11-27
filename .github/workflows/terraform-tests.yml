@@ -442,30 +442,59 @@ jobs:
 
     steps:
       - name: Check Results
+        env:
+          FORMAT_LINT: ${{ needs.format-and-lint.result }}
+          VALIDATION: ${{ needs.validation.result }}
+          SECURITY: ${{ needs.security-scan.result }}
+          PLAN_TESTS: ${{ needs.plan-tests.result }}
+          OUTPUT_TESTS: ${{ needs.output-tests.result }}
+          EXAMPLE_TESTS: ${{ needs.example-tests.result }}
         run: |
-          echo "=== Job Results ==="
-          echo "format-and-lint: ${{ needs.format-and-lint.result }}"
-          echo "validation: ${{ needs.validation.result }}"
-          echo "security-scan: ${{ needs.security-scan.result }}"
-          echo "plan-tests: ${{ needs.plan-tests.result }}"
-          echo "output-tests: ${{ needs.output-tests.result }}"
-          echo "example-tests: ${{ needs.example-tests.result }}"
-          echo ""
+          # Helper function to convert status to emoji
+          status_icon() {
+            case "$1" in
+              success)  echo "✅" ;;
+              failure)  echo "❌" ;;
+              skipped)  echo "⏭️" ;;
+              cancelled) echo "🚫" ;;
+              *)        echo "❓" ;;
+            esac
+          }
+
+          # Build summary
+          {
+            echo "## Workflow Results"
+            echo ""
+            echo "### Critical Checks"
+            echo "| Job | Status |"
+            echo "|-----|--------|"
+            echo "| Format & Lint | $(status_icon "$FORMAT_LINT") ${FORMAT_LINT} |"
+            echo "| Validation | $(status_icon "$VALIDATION") ${VALIDATION} |"
+            echo "| Security Scan | $(status_icon "$SECURITY") ${SECURITY} |"
+            echo ""
+            echo "### Test Jobs"
+            echo "| Job | Status |"
+            echo "|-----|--------|"
+            echo "| Plan Tests | $(status_icon "$PLAN_TESTS") ${PLAN_TESTS} |"
+            echo "| Output Tests | $(status_icon "$OUTPUT_TESTS") ${OUTPUT_TESTS} |"
+            echo "| Example Tests | $(status_icon "$EXAMPLE_TESTS") ${EXAMPLE_TESTS} |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
           # Check critical jobs (must pass)
-          if [ "${{ needs.format-and-lint.result }}" != "success" ] || \
-             [ "${{ needs.validation.result }}" != "success" ] || \
-             [ "${{ needs.security-scan.result }}" != "success" ]; then
-            echo "❌ Critical checks failed"
+          if [ "$FORMAT_LINT" != "success" ] || \
+             [ "$VALIDATION" != "success" ] || \
+             [ "$SECURITY" != "success" ]; then
+            echo "### ❌ Critical checks failed" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
-          # Check test jobs (report but don't fail on skipped)
-          if [ "${{ needs.plan-tests.result }}" == "failure" ] || \
-             [ "${{ needs.output-tests.result }}" == "failure" ] || \
-             [ "${{ needs.example-tests.result }}" == "failure" ]; then
-            echo "❌ One or more test jobs failed"
+          # Check test jobs (fail on failure, allow skipped)
+          if [ "$PLAN_TESTS" = "failure" ] || \
+             [ "$OUTPUT_TESTS" = "failure" ] || \
+             [ "$EXAMPLE_TESTS" = "failure" ]; then
+            echo "### ❌ One or more test jobs failed" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
-          echo "✅ All checks passed!"
+          echo "### ✅ All checks passed!" >> "$GITHUB_STEP_SUMMARY"
