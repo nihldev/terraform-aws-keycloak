@@ -33,7 +33,9 @@ This installs:
 - **trivy** - Security scanner
 - **Terraform-docs** - Documentation generator
 - **taplo** - TOML formatter and linter
-- **markdownlint-cli** - Markdown linter
+- **markdownlint-cli2** - Markdown linter
+- **actionlint** - GitHub Actions linter
+- **prettier** - YAML/JSON formatter
 - **shellcheck** - Shell script linter
 - **gitleaks** - Secret detection scanner
 - **conftest** - OPA policy testing

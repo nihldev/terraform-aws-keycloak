@@ -130,7 +130,7 @@ db_backup_retention_period = 30
 
 # HTTPS with custom domain
 keycloak_hostname = "auth.example.com"
-certificate_arn   = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+certificate_arn   = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
 ```
 
 ### Production with Aurora Provisioned
@@ -157,7 +157,7 @@ db_performance_insights_retention_period = 31
 
 # HTTPS with custom domain
 keycloak_hostname = "auth.example.com"
-certificate_arn   = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+certificate_arn   = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
 ```
 
 ## Accessing Keycloak

@@ -237,7 +237,7 @@ db_capacity_max = 4    # Maximum ACUs
 
 ```hcl
 module "keycloak" {
-  source = "./modules/Keycloak"
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "dev"
@@ -262,7 +262,7 @@ module "keycloak" {
 
 ```hcl
 module "keycloak" {
-  source = "./modules/Keycloak"
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "prod"
@@ -273,7 +273,7 @@ module "keycloak" {
   private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb", "subnet-ccccc"]
 
   # HTTPS with custom domain
-  certificate_arn    = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+  certificate_arn    = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
   keycloak_hostname  = "auth.example.com"
 
   # High availability
@@ -302,7 +302,7 @@ module "keycloak" {
 
 ```hcl
 module "keycloak" {
-  source = "./modules/Keycloak"
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "prod"
@@ -324,7 +324,7 @@ module "keycloak" {
   aurora_backtrack_window = 24  # 24 hours of backtrack (auto-enabled for prod)
 
   # HTTPS with custom domain
-  certificate_arn   = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+  certificate_arn   = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
   keycloak_hostname = "auth.example.com"
 
   # ECS scaling
@@ -353,7 +353,7 @@ output "aurora_reader_endpoint" {
 
 ```hcl
 module "keycloak" {
-  source = "./modules/Keycloak"
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "dev"
@@ -390,7 +390,7 @@ output "cost_warning" {
 
 ```hcl
 module "keycloak" {
-  source = "./modules/Keycloak"
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "prod"
@@ -406,7 +406,7 @@ module "keycloak" {
   db_capacity_max = 16  # Scale up to 16 ACU during authentication spikes
 
   # HTTPS
-  certificate_arn   = "arn:AWS:acm:us-east-1:xxxxx:certificate/xxxxx"
+  certificate_arn   = "arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx"
   keycloak_hostname = "auth.example.com"
 
   # Production ECS
@@ -464,7 +464,7 @@ resource "aws_acm_certificate_validation" "Keycloak" {
 
 # Deploy Keycloak
 module "keycloak" {
-  source = "./modules/Keycloak"
+  source = "./modules/keycloak"
 
   name        = "myapp"
   environment = "prod"
@@ -507,7 +507,7 @@ This module optionally integrates with Amazon SES to enable Keycloak to send ema
 
 ```hcl
 module "keycloak" {
-  source = "path/to/modules/Keycloak"
+  source = "path/to/modules/keycloak"
 
   # ... other configuration ...
 
@@ -701,7 +701,7 @@ If you already have a custom Keycloak image in any registry:
 
 ```hcl
 module "keycloak" {
-  source = "path/to/modules/Keycloak"
+  source = "path/to/modules/keycloak"
 
   # Use custom image from any registry
   keycloak_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/my-Keycloak:v1.0.0"
@@ -717,7 +717,7 @@ Let the module create an ECR repository for you:
 
 ```hcl
 module "keycloak" {
-  source = "path/to/modules/Keycloak"
+  source = "path/to/modules/keycloak"
 
   # Module creates ECR repository
   create_ecr_repository = true
@@ -810,15 +810,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-        uses: AWS-actions/configure-AWS-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          AWS-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: AWS-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag, and push image
         env:
@@ -883,7 +883,7 @@ For multi-account setups (e.g., shared ECR in central account):
 
 ```hcl
 module "keycloak" {
-  source = "path/to/modules/Keycloak"
+  source = "path/to/modules/keycloak"
 
   create_ecr_repository   = true
   ecr_allowed_account_ids = ["111111111111", "222222222222"]  # Allow these accounts to pull

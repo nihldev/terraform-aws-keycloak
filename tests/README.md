@@ -163,7 +163,7 @@ name: Terraform Tests
 on:
   pull_request:
     paths:
-      - 'modules/Keycloak/**'
+      - 'modules/keycloak/**'
       - 'examples/**'
       - 'tests/**'
 

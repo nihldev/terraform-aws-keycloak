@@ -15,7 +15,7 @@ This example deploys Keycloak with AWS SES integration for sending emails
 
 ```hcl
 module "Keycloak" {
-  source = "../../modules/Keycloak"
+  source = "../../modules/keycloak"
 
   name        = "my-Keycloak"
   environment = "dev"
