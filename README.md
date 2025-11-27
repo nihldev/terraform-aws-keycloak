@@ -1,5 +1,7 @@
 # Terraform AWS Keycloak
 
+[![Terraform Registry](https://img.shields.io/badge/Terraform%20Registry-nihldev%2Fkeycloak%2Faws-blue)](https://registry.terraform.io/modules/nihldev/keycloak/aws/latest)
+
 This repository contains a reusable Terraform module for deploying Keycloak on AWS.
 
 ## Available Modules
@@ -22,6 +24,26 @@ Deploy Keycloak identity and access management system on AWS with ECS Fargate, R
 
 ```hcl
 module "keycloak" {
+  source  = "nihldev/keycloak/aws"
+  version = "~> 1.0"
+
+  name        = "myapp"
+  environment = "prod"
+
+  vpc_id             = "vpc-xxxxx"
+  public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy"]
+  private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb"]
+
+  multi_az      = true
+  desired_count = 3
+}
+```
+
+<details>
+<summary>Alternative: Using Git source</summary>
+
+```hcl
+module "keycloak" {
   source = "git::https://github.com/nihldev/terraform-aws-keycloak.git//modules/keycloak?ref=v1.0.0"
 
   name        = "myapp"
@@ -36,9 +58,33 @@ module "keycloak" {
 }
 ```
 
+</details>
+
 ## Usage with infra-live
 
 Reference these modules in your `infra-live` repository:
+
+```hcl
+# infra-live/prod/us-east-1/keycloak/terragrunt.hcl
+terraform {
+  source = "tfr:///nihldev/keycloak/aws?version=~>1.0"
+}
+
+inputs = {
+  name        = "myapp"
+  environment = "prod"
+
+  vpc_id             = dependency.vpc.outputs.vpc_id
+  public_subnet_ids  = dependency.vpc.outputs.public_subnets
+  private_subnet_ids = dependency.vpc.outputs.private_subnets
+
+  multi_az      = true
+  desired_count = 3
+}
+```
+
+<details>
+<summary>Alternative: Using Git source with Terragrunt</summary>
 
 ```hcl
 # infra-live/prod/us-east-1/keycloak/terragrunt.hcl
@@ -58,6 +104,8 @@ inputs = {
   desired_count = 3
 }
 ```
+
+</details>
 
 ## Development
 

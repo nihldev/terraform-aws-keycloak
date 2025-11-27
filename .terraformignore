@@ -1,0 +1,43 @@
+# Git
+.git/
+.gitignore
+
+# GitHub
+.github/
+
+# Development tools
+.pre-commit-config.yaml
+mise.toml
+.mise.toml
+
+# Testing
+tests/
+*.tftest.hcl
+
+# Policy
+policy/
+
+# Documentation source (README is kept)
+CONTRIBUTING.md
+CHANGELOG.md
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Release
+release-please-config.json
+.release-please-manifest.json
