@@ -45,7 +45,7 @@ We use **Terraform's native testing framework** (`.tftest.hcl` files). This prov
 | Test File                          | Description                                                  | Type               |
 | ---------------------------------- | ------------------------------------------------------------ | ------------------ |
 | `outputs_validation.tftest.hcl`    | Validates all outputs are present and formatted correctly    | Apply + Assertions |
-| `module_validation.tftest.hcl`     | Validates terraform plan creates expected resources          | Plan Only          |
+| `module_validation.tftest.hcl`     | Validates `terraform plan` creates expected resources        | Plan Only          |
 | `variable_combinations.tftest.hcl` | Tests various variable combinations and edge cases           | Plan Only          |
 
 ## Running Tests
@@ -89,7 +89,7 @@ terraform test ./tests/module_validation.tftest.hcl
 
 Each test follows this pattern:
 
-1. **Initialize**: terraform initializes the test module
+1. **Initialize**: Terraform initializes the test module
 2. **Plan**: Creates execution plan
 3. **Apply**: Deploys resources to AWS (for `command = apply` tests)
 4. **Assert**: Validates outputs and conditions

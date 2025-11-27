@@ -226,7 +226,7 @@ tags = merge(
 - Use comments to explain complex configurations
 - Keep arrays and inline tables readable
 
-**Example (mise.toml):**
+**Example (`mise.toml`):**
 
 ```toml
 [tools]
@@ -445,8 +445,8 @@ This repository uses comprehensive automated checks to catch issues before code 
 
 | Check | What It Catches | Auto-Fix | Tool |
 | ----- | --------------- | -------- | ---- |
-| **Terraform Format** | Inconsistent code formatting | ✅ Yes | terraform fmt |
-| **Terraform Validate** | Syntax errors, invalid references | ❌ No | terraform validate |
+| **Terraform Format** | Inconsistent code formatting | ✅ Yes | `terraform fmt` |
+| **Terraform Validate** | Syntax errors, invalid references | ❌ No | `terraform validate` |
 | **TFLint** | Deprecated resources, naming violations, undocumented variables | ❌ No | tflint |
 | **Trivy** | Security issues, missing encryption, public resources | ❌ No | trivy |
 | **OPA Policies** | Keycloak-specific config issues | ❌ No | conftest |

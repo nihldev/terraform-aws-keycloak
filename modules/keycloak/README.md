@@ -58,7 +58,7 @@ sudo apt-get install python3
 python3 --version
 ```
 
-If Python is not available and `enable_ses = true`, terraform will fail during the plan phase with an error about the external data source.
+If Python is not available and `enable_ses = true`, Terraform will fail during the plan phase with an error about the external data source.
 
 ### Network Prerequisites
 
@@ -1282,7 +1282,7 @@ aws cloudwatch describe-alarms \
 
 | Phase                  | Duration        | How to Monitor                         |
 | ---------------------- | --------------- | -------------------------------------- |
-| terraform apply        | 15-20 min       | Watch terraform output                 |
+| `terraform apply`      | 15-20 min       | Watch Terraform output                 |
 | RDS creation           | 10-12 min       | `aws rds describe-db-instances`        |
 | ECS service creation   | 2-3 min         | `aws ecs describe-services`            |
 | Container image pull   | 1-2 min         | CloudWatch logs: "Pulling from quay.io"|
@@ -1391,7 +1391,7 @@ aws logs filter-log-events \
 
 | Name | Description | Type | Default |
 | ---- | ----------- | ---- | ------- |
-| database_type | Database type: `rds`, `aurora`, or `aurora-serverless` | string | "rds" |
+| database_type | Database type: `rds`, `aurora`, or `aurora-serverless` | string | `"rds"` |
 | db_instance_class | Instance class for RDS/Aurora (ignored for aurora-serverless) | string | "db.t4g.micro" |
 | db_capacity_min | Aurora Serverless v2 minimum ACUs (0.5-128) | number | 0.5 |
 | db_capacity_max | Aurora Serverless v2 maximum ACUs (0.5-128) | number | 2 |

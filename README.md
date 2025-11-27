@@ -18,7 +18,7 @@ Deploy Keycloak identity and access management system on AWS with ECS Fargate, R
 - Built-in monitoring and alerting
 - Production-ready security
 
-**Documentation:** [modules/keycloak/README.md](modules/keycloak/README.md)
+**Documentation:** [`modules/keycloak/README.md`](modules/keycloak/README.md)
 
 **Quick Start:**
 
