@@ -256,14 +256,33 @@ jobs:
           conftest test --policy policy/ modules/ --all-namespaces
 
   #######################
+  # Check AWS Credentials Availability
+  #######################
+  check-credentials:
+    name: Check AWS Credentials
+    runs-on: ubuntu-latest
+    outputs:
+      has_aws_creds: ${{ steps.check.outputs.has_creds }}
+    steps:
+      - name: Check for AWS credentials
+        id: check
+        run: |
+          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AWS credentials not configured - skipping AWS-dependent tests"
+          fi
+
+  #######################
   # Plan-Only Tests
   # Skipped if AWS credentials are not configured
   #######################
   plan-tests:
     name: Plan Tests
     runs-on: ubuntu-latest
-    needs: [validation, security-scan]
-    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+    needs: [validation, security-scan, check-credentials]
+    if: needs.check-credentials.outputs.has_aws_creds == 'true'
 
     strategy:
       fail-fast: false
@@ -312,8 +331,8 @@ jobs:
   output-tests:
     name: Output Validation
     runs-on: ubuntu-latest
-    needs: [validation, security-scan]
-    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+    needs: [validation, security-scan, check-credentials]
+    if: needs.check-credentials.outputs.has_aws_creds == 'true'
 
     steps:
       - name: Checkout
@@ -350,8 +369,8 @@ jobs:
   example-tests:
     name: Example Tests
     runs-on: ubuntu-latest
-    needs: [validation, security-scan]
-    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+    needs: [validation, security-scan, check-credentials]
+    if: needs.check-credentials.outputs.has_aws_creds == 'true'
 
     strategy:
       fail-fast: false
@@ -398,6 +417,7 @@ jobs:
       - format-and-lint
       - validation
       - security-scan
+      - check-credentials
       - plan-tests
       - output-tests
       - example-tests
