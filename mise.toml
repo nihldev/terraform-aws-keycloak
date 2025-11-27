@@ -11,7 +11,7 @@ terraform-docs = "latest"
 conftest       = "latest"
 
 # Code Quality
-pre-commit = "latest"
+lefthook   = "latest"
 shellcheck = "latest"
 gitleaks   = "latest"
 
@@ -35,13 +35,13 @@ actionlint = "latest"
 # YAML/JSON formatting
 prettier = "latest"
 
-# Automatically install pre-push hooks when mise activates
+# Automatically install git hooks when mise activates
 [hooks]
-postinstall = "tflint --init && pre-commit uninstall && pre-commit install --hook-type pre-push --install-hooks"
+postinstall = "tflint --init && lefthook install"
 
 [tasks.check]
 description = "Run pre-push checks on all files"
-run         = "pre-commit run --hook-stage push --all-files"
+run         = "lefthook run pre-push"
 
 [tasks.fmt]
 description = "Format all Terraform files"
