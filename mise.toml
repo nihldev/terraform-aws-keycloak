@@ -19,9 +19,9 @@ gitleaks   = "latest"
 python = "3.11"
 
 # Python linting and formatting
-ruff = "latest"
+ruff                = "latest"
 "pipx:basedpyright" = "latest"
-"pipx:yamllint" = "latest"
+"pipx:yamllint"     = "latest"
 
 # TOML formatting and linting
 taplo = "latest"
