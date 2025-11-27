@@ -1,0 +1,26 @@
+name: Check Tool Versions
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Weekly on Monday at 9am UTC
+  workflow_dispatch:
+
+jobs:
+  check-outdated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - name: Check for outdated tools
+        run: |
+          outdated=$(mise outdated 2>/dev/null || true)
+          if [ -n "$outdated" ]; then
+            {
+              echo "## Outdated Tools"
+              echo '```'
+              echo "$outdated"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## All tools up to date ✓" >> "$GITHUB_STEP_SUMMARY"
+          fi
