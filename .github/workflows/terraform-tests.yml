@@ -26,11 +26,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  TERRAFORM_VERSION: "1.14.0"
-  TFLINT_VERSION: "v0.54.0"
-  PYTHON_VERSION: "3.11"
-
 jobs:
   #######################
   # Format and Lint Checks
@@ -43,62 +38,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Setup Node.js (for markdownlint)
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install linting tools
-        run: |
-          npm install -g markdownlint-cli2 prettier
-          pip install yamllint ruff basedpyright
-
-      - name: Install additional tools
-        env:
-          GITLEAKS_VERSION: "8.21.2"
-          TERRAFORM_DOCS_VERSION: "0.19.0"
-          CONFTEST_VERSION: "0.56.0"
-        run: |
-          # Install shellcheck
-          sudo apt-get update && sudo apt-get install -y shellcheck
-          # Install taplo for TOML linting
-          TAPLO_URL="https://github.com/tamasfe/taplo/releases/latest/download"
-          curl -fsSL "$TAPLO_URL/taplo-linux-x86_64.gz" | gunzip > /usr/local/bin/taplo
-          chmod +x /usr/local/bin/taplo
-          # Install gitleaks for secret detection
-          GITLEAKS_URL="https://github.com/gitleaks/gitleaks/releases/download"
-          curl -fsSL "$GITLEAKS_URL/v$GITLEAKS_VERSION/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | tar xz -C /usr/local/bin gitleaks
-          # Install terraform-docs
-          TFDOCS_URL="https://github.com/terraform-docs/terraform-docs/releases/download"
-          TFDOCS_FILE="terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
-          curl -fsSL "$TFDOCS_URL/v$TERRAFORM_DOCS_VERSION/$TFDOCS_FILE" \
-            | tar xz -C /usr/local/bin terraform-docs
-          # Install conftest for OPA policy testing
-          CONFTEST_URL="https://github.com/open-policy-agent/conftest/releases/download"
-          curl -fsSL "$CONFTEST_URL/v$CONFTEST_VERSION/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
-            | tar xz -C /usr/local/bin conftest
+      - name: Setup mise
+        uses: jdx/mise-action@v3
 
       # Terraform formatting
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
       # GitHub Actions workflow linting
-      - name: Setup actionlint
-        uses: raven-actions/actionlint@v2
-        with:
-          matcher: true
-
       - name: Run actionlint
         run: actionlint -color
 
@@ -189,15 +136,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Setup Python (for SES SMTP script)
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Setup mise
+        uses: jdx/mise-action@v3
 
       # Validate main module
       - name: Terraform Init (Module)
@@ -231,10 +171,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      - name: Setup mise
+        uses: jdx/mise-action@v3
 
       - name: Run Trivy
         uses: aquasecurity/trivy-action@master
@@ -245,12 +183,6 @@ jobs:
           exit-code: "1"
           severity: "HIGH,CRITICAL"
 
-      # TFLint linter
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v4
-        with:
-          tflint_version: ${{ env.TFLINT_VERSION }}
-
       - name: Init TFLint
         working-directory: modules/keycloak
         run: tflint --init --config=../../.tflint.hcl
@@ -259,18 +191,8 @@ jobs:
         working-directory: modules/keycloak
         run: tflint -f compact --minimum-failure-severity=warning --config=../../.tflint.hcl
 
-      # OPA/Conftest policy validation
-      - name: Install Conftest
-        env:
-          CONFTEST_VERSION: "0.56.0"
-        run: |
-          CONFTEST_URL="https://github.com/open-policy-agent/conftest/releases/download"
-          curl -fsSL "$CONFTEST_URL/v$CONFTEST_VERSION/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
-            | tar xz -C /usr/local/bin conftest
-
       - name: Run Conftest Policy Checks
-        run: |
-          conftest test --policy policy/ modules/ --all-namespaces
+        run: conftest test --policy policy/ modules/ --all-namespaces
 
   #######################
   # Check AWS Credentials Availability
@@ -314,15 +236,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Setup Python (for SES SMTP script)
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Setup mise
+        uses: jdx/mise-action@v3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -355,15 +270,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Setup Python (for SES SMTP script)
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Setup mise
+        uses: jdx/mise-action@v3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -400,15 +308,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Setup Python (for SES SMTP script)
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Setup mise
+        uses: jdx/mise-action@v3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
