@@ -2,25 +2,22 @@ name: Terraform Tests
 
 on:
   pull_request:
-    paths:
-      - "modules/keycloak/**"
-      - "examples/**"
-      - "tests/**"
-      - "scripts/**"
-      - "policy/**"
-      - ".github/workflows/terraform-tests.yml"
-      - ".pre-commit-config.yaml"
-      - ".tflint.hcl"
-      - ".trivyignore"
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".claude/**"
+      - ".release-please-manifest.json"
+      - "release-please-config.json"
   push:
     branches: [main]
-    paths:
-      - "modules/keycloak/**"
-      - "examples/**"
-      - "tests/**"
-      - "scripts/**"
-      - "policy/**"
-      - ".github/workflows/terraform-tests.yml"
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".claude/**"
+      - ".release-please-manifest.json"
+      - "release-please-config.json"
   workflow_dispatch: # Allow manual trigger
 
 # Prevent duplicate workflow runs
