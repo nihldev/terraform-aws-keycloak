@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/nihldev/terraform-aws-keycloak/compare/v0.1.0...v0.1.1) (2025-11-28)
+
+
+### Features
+
+* improve repository visibility and community features ([#3](https://github.com/nihldev/terraform-aws-keycloak/issues/3)) ([5175b0d](https://github.com/nihldev/terraform-aws-keycloak/commit/5175b0dfcc3d0c34d65f42fca69c1881f16e0e49))
+
 ## 0.1.0 (2025-11-28)
 
 
