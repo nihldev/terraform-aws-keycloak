@@ -1,8 +1,14 @@
 # Terraform AWS Keycloak
 
-[![Terraform Registry](https://img.shields.io/badge/Terraform%20Registry-nihldev%2Fkeycloak%2Faws-blue)](https://registry.terraform.io/modules/nihldev/keycloak/aws/latest)
+[![Terraform Registry](https://img.shields.io/badge/Terraform%20Registry-nihldev%2Fkeycloak%2Faws-blue?logo=terraform)](https://registry.terraform.io/modules/nihldev/keycloak/aws/latest)
+[![GitHub release](https://img.shields.io/github/v/release/nihldev/terraform-aws-keycloak?logo=github)](https://github.com/nihldev/terraform-aws-keycloak/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.14-purple?logo=terraform)](https://www.terraform.io/)
+[![CI](https://github.com/nihldev/terraform-aws-keycloak/actions/workflows/terraform-tests.yml/badge.svg)](https://github.com/nihldev/terraform-aws-keycloak/actions/workflows/terraform-tests.yml)
 
 Terraform module for deploying [Keycloak](https://www.keycloak.org/) identity and access management on AWS using ECS Fargate, with flexible database options and production-ready defaults.
+
+> Deploy a production-ready Keycloak identity provider on AWS with a single module call. Supports RDS PostgreSQL, Aurora Provisioned, and Aurora Serverless v2 databases.
 
 ## Features
 
@@ -77,10 +83,25 @@ inputs = {
 - **[Tests](tests/README.md)** - Terraform test framework documentation
 - **[Contributing](CONTRIBUTING.md)** - Development setup, code standards, testing
 
+## Requirements
+
+| Name                                                                           | Version |
+| ------------------------------------------------------------------------------ | ------- |
+| [Terraform](https://www.terraform.io/)                                         | >= 1.14 |
+| [AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest)   | ~> 5.0  |
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+- Report bugs via [GitHub Issues](https://github.com/nihldev/terraform-aws-keycloak/issues)
+- Ask questions in [GitHub Discussions](https://github.com/nihldev/terraform-aws-keycloak/discussions)
+- Submit PRs for bug fixes and features
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+If you find this module helpful, please consider giving it a ⭐ on [GitHub](https://github.com/nihldev/terraform-aws-keycloak)!

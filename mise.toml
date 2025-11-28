@@ -53,7 +53,7 @@ run         = "taplo format"
 
 [tasks.fmt-md]
 description = "Format all Markdown files"
-run         = "markdownlint-cli2 --fix '**/*.md'"
+run         = "markdownlint-cli2 --fix '**/*.md' '#**/CHANGELOG.md' '#**/.terraform/**'"
 
 [tasks.fmt-py]
 description = "Format Python files"
@@ -61,7 +61,7 @@ run         = "ruff format ."
 
 [tasks.fmt-all]
 description = "Format all files (Terraform, TOML, Markdown, Workflows, Python)"
-run         = "terraform fmt -recursive . && taplo format && markdownlint-cli2 --fix '**/*.md' && prettier --write '.github/workflows/*.yml' && ruff format ."
+run         = "terraform fmt -recursive . && taplo format && markdownlint-cli2 --fix '**/*.md' '#**/CHANGELOG.md' '#**/.terraform/**' && prettier --write '.github/workflows/*.yml' && ruff format ."
 
 [tasks.fmt-workflows]
 description = "Format GitHub workflow files"
@@ -73,7 +73,7 @@ run         = "taplo lint"
 
 [tasks.lint-md]
 description = "Lint all Markdown files"
-run         = "markdownlint-cli2 '**/*.md'"
+run         = "markdownlint-cli2 '**/*.md' '#**/CHANGELOG.md' '#**/.terraform/**'"
 
 [tasks.lint-workflows]
 description = "Lint GitHub workflow files"

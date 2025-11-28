@@ -41,7 +41,7 @@ pre-commit:
 
     markdownlint:
       glob: "*.md"
-      exclude: "(node_modules/|\\.terraform/)"
+      exclude: "(node_modules/|\\.terraform/|CHANGELOG\\.md)"
       run: markdownlint-cli2 {staged_files}
 
     prettier-workflows:
