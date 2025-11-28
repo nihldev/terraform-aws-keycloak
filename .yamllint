@@ -1,0 +1,24 @@
+---
+extends: relaxed
+
+rules:
+  # Increase line length limit for GitHub Actions workflows
+  # 120 chars is a reasonable limit that accommodates most workflow patterns
+  line-length:
+    max: 120
+    level: error
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+
+  # Ensure consistent indentation
+  indentation:
+    spaces: 2
+    indent-sequences: true
+
+  # Require document start marker
+  document-start: disable
+
+  # Truthy values - allow 'on' for GitHub Actions triggers
+  truthy:
+    allowed-values: ["true", "false", "on"]
+    check-keys: false

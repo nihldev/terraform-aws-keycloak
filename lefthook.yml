@@ -1,0 +1,111 @@
+# Lefthook configuration
+# https://github.com/evilmartians/lefthook
+
+# Pre-commit hooks - fast checks on every commit
+pre-commit:
+  parallel: true
+  commands:
+    terraform-fmt:
+      glob: "*.tf"
+      run: terraform fmt -check -diff {staged_files}
+
+    terraform-fmt-test:
+      glob: "*.tftest.hcl"
+      run: terraform fmt -check -diff {staged_files}
+
+    terraform-docs:
+      glob: "*.tf"
+      run: |
+        terraform-docs markdown table --output-file README.md --output-mode inject modules/keycloak
+        git diff --quiet README.md || (echo "README.md was updated by terraform-docs" && exit 1)
+
+    taplo-format:
+      glob: "*.toml"
+      run: taplo fmt --check {staged_files}
+
+    taplo-lint:
+      glob: "*.toml"
+      run: taplo lint {staged_files}
+
+    actionlint:
+      glob: ".github/workflows/*.yml"
+      run: actionlint {staged_files}
+
+    ruff-lint:
+      glob: "*.py"
+      run: ruff check {staged_files}
+
+    ruff-format:
+      glob: "*.py"
+      run: ruff format --check {staged_files}
+
+    markdownlint:
+      glob: "*.md"
+      exclude: "(node_modules/|\\.terraform/)"
+      run: markdownlint-cli2 {staged_files}
+
+    prettier-workflows:
+      glob: ".github/workflows/*.yml"
+      run: prettier --check {staged_files}
+
+    shellcheck:
+      glob: "scripts/*.sh"
+      run: shellcheck {staged_files}
+
+    yamllint:
+      glob: "*.{yml,yaml}"
+      run: yamllint -d relaxed {staged_files}
+
+    check-large-files:
+      glob: "*"
+      run: |
+        for file in {staged_files}; do
+          size=$(wc -c < "$file" 2>/dev/null || echo 0)
+          if [ "$size" -gt 1000000 ]; then
+            echo "Error: $file is larger than 1MB ($size bytes)"
+            exit 1
+          fi
+        done
+
+    check-merge-conflict:
+      glob: "*"
+      run: |
+        if grep -rln "^<<<<<<< \|^=======$\|^>>>>>>> " {staged_files} 2>/dev/null; then
+          echo "Error: Merge conflict markers found"
+          exit 1
+        fi
+
+# Pre-push hooks - comprehensive checks before pushing
+pre-push:
+  parallel: true
+  commands:
+    terraform-validate:
+      root: "modules/keycloak"
+      run: terraform init -backend=false && terraform validate
+
+    terraform-validate-examples:
+      run: |
+        for example in examples/*/; do
+          echo "=== Validating $example ==="
+          (cd "$example" && terraform init -backend=false && terraform validate)
+        done
+
+    tflint:
+      root: "modules/keycloak"
+      run: tflint -f compact --minimum-failure-severity=warning --config=../../.tflint.hcl
+
+    trivy:
+      run: trivy config --severity HIGH,CRITICAL --ignorefile .trivyignore modules/keycloak
+
+    conftest:
+      run: conftest test --policy policy/ modules/ --all-namespaces
+
+    check-tfvars-coverage:
+      run: ./scripts/check-tfvars-coverage.sh
+
+    basedpyright:
+      glob: "*.py"
+      run: basedpyright
+
+    gitleaks:
+      run: gitleaks git --pre-commit --redact --staged --verbose

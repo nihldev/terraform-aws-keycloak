@@ -1,0 +1,200 @@
+#######################
+# Aurora Serverless v2 Example
+#######################
+# This example demonstrates deploying Keycloak with Aurora Serverless v2.
+# Aurora Serverless auto-scales capacity based on demand - ideal for variable workloads.
+
+#######################
+# General Configuration
+#######################
+
+# Name prefix for all resources
+name = "keycloak"
+
+# Environment name (dev, staging, prod)
+environment = "dev"
+
+# Additional tags for all resources
+# tags = {}
+
+#######################
+# Networking
+#######################
+
+# VPC and subnet IDs (required - use your existing VPC)
+# vpc_id             = "vpc-xxxxx"
+# public_subnet_ids  = ["subnet-xxxxx", "subnet-yyyyy"]
+# private_subnet_ids = ["subnet-aaaaa", "subnet-bbbbb"]
+
+# CIDR blocks allowed to access Keycloak
+allowed_cidr_blocks = ["0.0.0.0/0"]
+
+# ACM certificate ARN for HTTPS (optional)
+# certificate_arn = ""
+
+# ALB access logs (optional)
+# alb_access_logs_enabled = false
+# alb_access_logs_bucket  = ""
+# alb_access_logs_prefix  = ""
+
+# ALB deletion protection
+# alb_deletion_protection = false
+
+# ALB session stickiness
+# alb_stickiness_enabled  = false
+# alb_stickiness_duration = 86400
+
+# WAF WebACL ARN
+# waf_acl_arn = ""
+
+#######################
+# High Availability
+#######################
+
+# Enable multi-AZ deployment
+multi_az = false
+
+#######################
+# ECS Configuration
+#######################
+
+# Keycloak version to deploy
+keycloak_version = "26.0"
+
+# Number of Keycloak instances
+desired_count = 1
+
+# ECS task resources (smaller for dev)
+task_cpu    = 512
+task_memory = 1024
+
+# Enable CloudWatch Container Insights
+# enable_container_insights = true
+
+# CloudWatch log retention
+# cloudwatch_log_retention_days = 7
+
+# SNS topic for CloudWatch alarms
+# alarm_sns_topic_arn = ""
+
+# Health check configuration
+# health_check_grace_period_seconds = 600
+# health_check_path = "/health/ready"
+
+# Autoscaling max capacity
+# autoscaling_max_capacity = 3
+
+#######################
+# Database Configuration
+#######################
+
+# Database type: aurora-serverless for Aurora Serverless v2
+# database_type = "aurora-serverless"  # Set in main.tf
+
+# RDS/Aurora Provisioned instance class (not used for serverless)
+# db_instance_class = "db.t4g.micro"
+
+# Aurora Serverless v2 capacity in ACUs (Aurora Capacity Units)
+# 1 ACU ≈ 2GB RAM, min 0.5, max 128
+db_capacity_min = 0.5
+db_capacity_max = 2
+
+# Aurora replica count (optional for serverless)
+# aurora_replica_count = 0
+
+# Aurora backtrack window (not supported for serverless)
+# aurora_backtrack_window = 0
+
+# RDS storage (not used for Aurora - storage auto-scales)
+# db_allocated_storage     = 20
+# db_max_allocated_storage = 100
+
+# PostgreSQL engine version
+# db_engine_version = "16.3"
+
+# Additional PostgreSQL parameters
+# db_parameters = []
+
+# Backup configuration
+db_backup_retention_period = 7
+# db_backup_window           = "03:00-04:00"
+# db_maintenance_window      = "sun:04:00-sun:05:00"
+
+# Database protection
+# db_deletion_protection = false
+# db_skip_final_snapshot = true
+
+# KMS encryption keys
+# db_kms_key_id      = ""
+# secrets_kms_key_id = ""
+
+# Performance Insights
+# db_performance_insights_retention_period = 7
+
+# IAM database authentication
+# db_iam_database_authentication_enabled = false
+
+#######################
+# Keycloak Configuration
+#######################
+
+# Admin username
+# keycloak_admin_username = "admin"
+
+# Log level
+keycloak_loglevel = "INFO"
+
+# Hostname for Keycloak
+# keycloak_hostname = ""
+
+# Additional environment variables
+# keycloak_extra_env_vars = {}
+
+# Cache configuration
+# keycloak_cache_enabled = true
+# keycloak_cache_stack   = "jdbc-ping"
+
+# Database connection pool
+# db_pool_initial_size = 5
+# db_pool_min_size     = 5
+# db_pool_max_size     = 20
+
+#######################
+# SES Email Configuration
+#######################
+
+# Enable SES email integration
+# enable_ses = false
+
+# SES domain
+# ses_domain = ""
+
+# Email identity
+# ses_email_identity = ""
+
+# From email address
+# ses_from_email = ""
+
+# Route53 zone ID
+# ses_route53_zone_id = ""
+
+# SES configuration set
+# ses_configuration_set_enabled = false
+
+#######################
+# Custom Image / ECR
+#######################
+
+# Custom Keycloak image URI
+# keycloak_image = ""
+
+# Create ECR repository
+# create_ecr_repository = false
+
+# ECR configuration
+# ecr_image_tag_mutability  = "MUTABLE"
+# ecr_scan_on_push          = true
+# ecr_image_retention_count = 30
+# ecr_image_tag_prefixes    = ["v", "release", "prod", "staging", "dev"]
+# ecr_kms_key_id            = ""
+# ecr_allowed_account_ids   = []

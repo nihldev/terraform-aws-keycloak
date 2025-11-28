@@ -1,0 +1,124 @@
+# Enable experimental features for hooks
+[settings]
+experimental = true
+
+[tools]
+# Infrastructure as Code
+terraform      = "1.14.0"
+tflint         = "0.60.0"
+trivy          = "0.67.2"
+terraform-docs = "0.20.0"
+conftest       = "0.64.0"
+
+# Code Quality
+lefthook   = "2.0.4"
+shellcheck = "0.11.0"
+gitleaks   = "8.30.0"
+
+# Python runtime (required for SES SMTP password derivation in keycloak module)
+python = "3.11"
+
+# Python linting and formatting
+ruff                = "0.14.6"
+"pipx:basedpyright" = "1.34.0"
+"pipx:yamllint"     = "1.37.1"
+
+# TOML formatting and linting
+taplo = "0.10.0"
+
+# Markdown linting
+markdownlint-cli2 = "0.19.0"
+
+# GitHub Actions workflow linting
+actionlint = "1.7.9"
+
+# YAML/JSON formatting
+prettier = "3.6.2"
+
+# Automatically install git hooks when mise activates
+[hooks]
+postinstall = "tflint --init && lefthook install"
+
+[tasks.check]
+description = "Run pre-push checks on all files"
+run         = "lefthook run pre-push"
+
+[tasks.fmt]
+description = "Format all Terraform files"
+run         = "terraform fmt -recursive ."
+
+[tasks.fmt-toml]
+description = "Format all TOML files"
+run         = "taplo format"
+
+[tasks.fmt-md]
+description = "Format all Markdown files"
+run         = "markdownlint-cli2 --fix '**/*.md'"
+
+[tasks.fmt-py]
+description = "Format Python files"
+run         = "ruff format ."
+
+[tasks.fmt-all]
+description = "Format all files (Terraform, TOML, Markdown, Workflows, Python)"
+run         = "terraform fmt -recursive . && taplo format && markdownlint-cli2 --fix '**/*.md' && prettier --write '.github/workflows/*.yml' && ruff format ."
+
+[tasks.fmt-workflows]
+description = "Format GitHub workflow files"
+run         = "prettier --write '.github/workflows/*.yml'"
+
+[tasks.lint-toml]
+description = "Lint all TOML files"
+run         = "taplo lint"
+
+[tasks.lint-md]
+description = "Lint all Markdown files"
+run         = "markdownlint-cli2 '**/*.md'"
+
+[tasks.lint-workflows]
+description = "Lint GitHub workflow files"
+run         = "actionlint"
+
+[tasks.lint-py]
+description = "Lint Python files with ruff"
+run         = "ruff check ."
+
+[tasks.typecheck-py]
+description = "Type check Python files with basedpyright"
+run         = "basedpyright"
+
+[tasks.check-py]
+description = "Run all Python checks (lint, format check, type check)"
+run         = "ruff check . && ruff format --check . && basedpyright"
+
+[tasks.validate]
+description = "Validate all Terraform configurations"
+run         = "find . -type f -name '*.tf' -not -path '*/.terraform/*' -exec dirname {} \\; | sort -u | xargs -I {} sh -c 'echo \"Validating {}\" && terraform -chdir={} init -backend=false && terraform -chdir={} validate'"
+
+[tasks.coverage]
+description = "Check test coverage for modules"
+run         = "./scripts/check-test-coverage.sh"
+
+[tasks.test]
+description = "Run Terraform tests"
+run         = "terraform test"
+
+[tasks."test:fast"]
+description = "Run fast plan-only tests"
+run         = "terraform test ./tests/module_validation.tftest.hcl ./tests/variable_combinations.tftest.hcl"
+
+[tasks.lint-sh]
+description = "Lint shell scripts with shellcheck"
+run         = "shellcheck scripts/*.sh"
+
+[tasks.lint-yaml]
+description = "Lint YAML files with yamllint"
+run         = "yamllint -d relaxed ."
+
+[tasks.secrets]
+description = "Scan for secrets with gitleaks"
+run         = "gitleaks git --redact --verbose"
+
+[tasks.policy]
+description = "Run OPA policy checks with conftest"
+run         = "conftest test --policy policy/ modules/ --all-namespaces"

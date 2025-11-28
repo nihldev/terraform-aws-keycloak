@@ -1,0 +1,74 @@
+# Taplo configuration for TOML formatting
+# See: https://taplo.tamasfe.dev/configuration/
+
+# Include all TOML files
+include = ["**/*.toml"]
+
+# Exclude patterns
+exclude = [".git/**", ".terraform/**", "**/.terraform/**"]
+
+# Formatting options
+[formatting]
+# Align entries vertically
+align_entries = true
+
+# Align comments after entries
+align_comments = true
+
+# Array formatting
+array_trailing_comma = true
+array_auto_expand    = true
+array_auto_collapse  = true
+
+# Compact arrays (single line if short)
+compact_arrays = true
+
+# Compact inline tables
+compact_inline_tables = false
+
+# Compact entries (remove extra newlines)
+compact_entries = false
+
+# Column width for alignment
+column_width = 80
+
+# Indent entries in tables
+indent_tables = false
+
+# Indent entries in arrays
+indent_entries = false
+
+# Inline table expansion threshold
+inline_table_expand = true
+
+# Reorder keys alphabetically
+reorder_keys = false
+
+# Reorder arrays
+reorder_arrays = false
+
+# Allowed blank lines
+allowed_blank_lines = 1
+
+# Trailing newline
+trailing_newline = true
+
+# CRLF line endings (false = LF)
+crlf = false
+
+# Schema configuration
+[schema]
+enabled = true
+
+# Rule-specific formatting
+[[rule]]
+include    = ["mise.toml", ".mise.toml", ".mise/config.toml"]
+formatting = { reorder_keys = false, compact_entries = false, allowed_blank_lines = 2 }
+
+[[rule]]
+include    = ["**/Cargo.toml"]
+formatting = { reorder_keys = false }
+
+[[rule]]
+include    = ["**/pyproject.toml"]
+formatting = { reorder_keys = false }

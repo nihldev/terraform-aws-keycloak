@@ -1,0 +1,403 @@
+name: Terraform Tests
+
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".claude/**"
+      - ".release-please-manifest.json"
+      - "release-please-config.json"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".claude/**"
+      - ".release-please-manifest.json"
+      - "release-please-config.json"
+  workflow_dispatch: # Allow manual trigger
+
+# Prevent duplicate workflow runs
+# Groups by PR number for pull_request events, or by branch name for push events
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  #######################
+  # Format and Lint Checks
+  #######################
+  format-and-lint:
+    name: Format & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+
+      # Terraform formatting
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      # GitHub Actions workflow linting
+      - name: Run actionlint
+        run: actionlint -color
+
+      # YAML linting (strict mode: warnings become errors)
+      - name: YAML Lint
+        run: |
+          yamllint --strict .github/workflows/*.yml
+
+      # Check GitHub workflow formatting with prettier
+      - name: Check workflow formatting
+        run: |
+          prettier --check '.github/workflows/*.yml'
+
+      # Markdown linting
+      - name: Markdown Lint
+        run: |
+          markdownlint-cli2 "**/*.md" "#node_modules" "#.terraform" --config .markdownlint.yaml
+
+      # Python linting and formatting
+      - name: Python Lint (Ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+
+      # Python type checking
+      - name: Python Type Check (Basedpyright)
+        run: basedpyright
+
+      # Shell script linting (fail on warnings and above)
+      - name: Shellcheck
+        run: |
+          shellcheck --severity=warning scripts/*.sh
+
+      # TOML linting
+      - name: TOML Lint (Taplo)
+        run: |
+          taplo lint
+          taplo fmt --check
+
+      # Secret detection
+      - name: Secret Detection (Gitleaks)
+        run: |
+          gitleaks git --redact --verbose
+
+      # Terraform docs validation
+      - name: Terraform Docs Check
+        run: |
+          terraform-docs markdown table \
+            --output-file README.md --output-mode inject modules/keycloak
+          if ! git diff --quiet README.md; then
+            echo "Error: README.md is out of date."
+            echo "Run: terraform-docs markdown table --output-file README.md \\"
+            echo "       --output-mode inject modules/keycloak"
+            git diff README.md
+            exit 1
+          fi
+
+      # Check tfvars.example coverage
+      - name: Check tfvars.example Coverage
+        run: |
+          ./scripts/check-tfvars-coverage.sh
+
+      # Check for trailing whitespace and file endings
+      - name: Check file formatting
+        run: |
+          # Check for trailing whitespace (excluding markdown)
+          if git grep -l '[[:blank:]]$' -- '*.tf' '*.py' '*.sh' '*.yml' '*.yaml' 2>/dev/null; then
+            echo "Error: trailing whitespace found"
+            exit 1
+          fi
+          # Check files end with newline
+          for f in $(find . -name "*.tf" -o -name "*.py" -o -name "*.sh" | head -20); do
+            if [ -n "$(tail -c 1 "$f")" ]; then
+              echo "Error: $f does not end with newline"
+              exit 1
+            fi
+          done
+          echo "All file formatting checks passed"
+
+  #######################
+  # Terraform Validation
+  #######################
+  validation:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+
+      # Validate main module
+      - name: Terraform Init (Module)
+        working-directory: modules/keycloak
+        run: terraform init -backend=false
+
+      - name: Terraform Validate (Module)
+        working-directory: modules/keycloak
+        run: terraform validate
+
+      # Validate all examples
+      - name: Validate Examples
+        run: |
+          for example in examples/*/; do
+            echo "=== Validating $example ==="
+            cd "$example"
+            terraform init -backend=false
+            terraform validate
+            cd ../..
+          done
+
+  #######################
+  # Security Scanning
+  #######################
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: validation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "config"
+          scan-ref: "modules/keycloak"
+          trivyignores: ".trivyignore"
+          exit-code: "1"
+          severity: "HIGH,CRITICAL"
+
+      - name: Init TFLint
+        working-directory: modules/keycloak
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: tflint --init --config=../../.tflint.hcl
+
+      - name: Run TFLint
+        working-directory: modules/keycloak
+        run: tflint -f compact --minimum-failure-severity=warning --config=../../.tflint.hcl
+
+      - name: Run Conftest Policy Checks
+        run: conftest test --policy policy/ modules/ --all-namespaces
+
+  #######################
+  # Check AWS Credentials Availability
+  #######################
+  check-credentials:
+    name: Check AWS Credentials
+    runs-on: ubuntu-latest
+    outputs:
+      has_aws_creds: ${{ steps.check.outputs.has_creds }}
+    steps:
+      - name: Check for AWS credentials
+        id: check
+        run: |
+          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AWS credentials not configured - skipping AWS-dependent tests"
+          fi
+
+  #######################
+  # Plan-Only Tests
+  # Skipped if AWS credentials are not configured
+  #######################
+  plan-tests:
+    name: Plan Tests
+    runs-on: ubuntu-latest
+    needs: [validation, security-scan, check-credentials]
+    if: needs.check-credentials.outputs.has_aws_creds == 'true'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - module_validation
+          - variable_combinations
+          - aurora_database
+          - ses_email
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          # Use OIDC for better security (recommended)
+          # role-to-assume: ${{ secrets.AWS_TEST_ROLE_ARN }}
+          # Or use access keys
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run Test - ${{ matrix.test }}
+        run: |
+          set -o pipefail
+          # Non-verbose output for cleaner logs; run locally with -verbose to debug failures
+          terraform test tests/${{ matrix.test }}.tftest.hcl 2>&1 | head -500
+        timeout-minutes: 20
+
+  #######################
+  # Output Validation Tests
+  # Skipped if AWS credentials are not configured
+  #######################
+  output-tests:
+    name: Output Validation
+    runs-on: ubuntu-latest
+    needs: [validation, security-scan, check-credentials]
+    if: needs.check-credentials.outputs.has_aws_creds == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run Output Validation Tests
+        run: |
+          set -o pipefail
+          # Non-verbose output for cleaner logs; run locally with -verbose to debug failures
+          terraform test tests/outputs_validation.tftest.hcl 2>&1 | head -500
+        timeout-minutes: 30
+
+  #######################
+  # Example Validation Tests
+  # Skipped if AWS credentials are not configured
+  #######################
+  example-tests:
+    name: Example Tests
+    runs-on: ubuntu-latest
+    needs: [validation, security-scan, check-credentials]
+    if: needs.check-credentials.outputs.has_aws_creds == 'true'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - examples_basic
+          - examples_complete
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run Test - ${{ matrix.example }}
+        run: |
+          set -o pipefail
+          # Non-verbose output for cleaner logs; run locally with -verbose to debug failures
+          terraform test tests/${{ matrix.example }}.tftest.hcl 2>&1 | head -500
+        timeout-minutes: 20
+
+  #######################
+  # Status Check (Final Gate)
+  #######################
+  status-check:
+    name: Status Check
+    runs-on: ubuntu-latest
+    needs:
+      - format-and-lint
+      - validation
+      - security-scan
+      - check-credentials
+      - plan-tests
+      - output-tests
+      - example-tests
+    if: always()
+
+    steps:
+      - name: Check Results
+        env:
+          FORMAT_LINT: ${{ needs.format-and-lint.result }}
+          VALIDATION: ${{ needs.validation.result }}
+          SECURITY: ${{ needs.security-scan.result }}
+          PLAN_TESTS: ${{ needs.plan-tests.result }}
+          OUTPUT_TESTS: ${{ needs.output-tests.result }}
+          EXAMPLE_TESTS: ${{ needs.example-tests.result }}
+        run: |
+          # Helper function to convert status to emoji
+          status_icon() {
+            case "$1" in
+              success)  echo "✅" ;;
+              failure)  echo "❌" ;;
+              skipped)  echo "⏭️" ;;
+              cancelled) echo "🚫" ;;
+              *)        echo "❓" ;;
+            esac
+          }
+
+          # Build summary
+          {
+            echo "## Workflow Results"
+            echo ""
+            echo "### Critical Checks"
+            echo "| Job | Status |"
+            echo "|-----|--------|"
+            echo "| Format & Lint | $(status_icon "$FORMAT_LINT") ${FORMAT_LINT} |"
+            echo "| Validation | $(status_icon "$VALIDATION") ${VALIDATION} |"
+            echo "| Security Scan | $(status_icon "$SECURITY") ${SECURITY} |"
+            echo ""
+            echo "### Test Jobs"
+            echo "| Job | Status |"
+            echo "|-----|--------|"
+            echo "| Plan Tests | $(status_icon "$PLAN_TESTS") ${PLAN_TESTS} |"
+            echo "| Output Tests | $(status_icon "$OUTPUT_TESTS") ${OUTPUT_TESTS} |"
+            echo "| Example Tests | $(status_icon "$EXAMPLE_TESTS") ${EXAMPLE_TESTS} |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Check critical jobs (must pass)
+          if [ "$FORMAT_LINT" != "success" ] || \
+             [ "$VALIDATION" != "success" ] || \
+             [ "$SECURITY" != "success" ]; then
+            echo "### ❌ Critical checks failed" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          # Check test jobs (fail on failure, allow skipped)
+          if [ "$PLAN_TESTS" = "failure" ] || \
+             [ "$OUTPUT_TESTS" = "failure" ] || \
+             [ "$EXAMPLE_TESTS" = "failure" ]; then
+            echo "### ❌ One or more test jobs failed" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "### ✅ All checks passed!" >> "$GITHUB_STEP_SUMMARY"
