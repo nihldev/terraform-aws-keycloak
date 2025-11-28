@@ -19,7 +19,7 @@ Terraform module for deploying [Keycloak](https://www.keycloak.org/) identity an
 ```hcl
 module "keycloak" {
   source  = "nihldev/keycloak/aws"
-  version = "~> 1.0"
+  version = "~> 0.1"
 
   name        = "myapp"
   environment = "prod"
