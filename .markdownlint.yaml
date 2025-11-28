@@ -1,5 +1,6 @@
 # Markdownlint configuration
 # See: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+# Note: CHANGELOG.md and .terraform/ directories are excluded via command-line globs
 
 # Default state for all rules
 default: true
