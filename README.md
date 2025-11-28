@@ -88,7 +88,7 @@ inputs = {
 | Name                                                                           | Version |
 | ------------------------------------------------------------------------------ | ------- |
 | [Terraform](https://www.terraform.io/)                                         | >= 1.14 |
-| [AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest)   | >= 5.0  |
+| [AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest)   | ~> 5.0  |
 
 ## Contributing
 
@@ -104,4 +104,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-If you find this module helpful, please consider giving it a :star: on [GitHub](https://github.com/nihldev/terraform-aws-keycloak)!
+If you find this module helpful, please consider giving it a ⭐ on [GitHub](https://github.com/nihldev/terraform-aws-keycloak)!
