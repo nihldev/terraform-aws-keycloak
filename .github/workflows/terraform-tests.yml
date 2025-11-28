@@ -185,6 +185,8 @@ jobs:
 
       - name: Init TFLint
         working-directory: modules/keycloak
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: tflint --init --config=../../.tflint.hcl
 
       - name: Run TFLint
